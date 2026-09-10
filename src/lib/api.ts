@@ -31,7 +31,7 @@ api.interceptors.response.use(
           const response = await axios.post(`${API_BASE_URL}/auth/token/refresh`, {
             refresh: refreshToken,
           })
-          const { access, refresh } = response.data.data
+          const { access, refresh } = extractData<{ access: string; refresh: string }>(response)
           localStorage.setItem('access_token', access)
           localStorage.setItem('refresh_token', refresh)
           originalRequest.headers.Authorization = `Bearer ${access}`
@@ -47,8 +47,13 @@ api.interceptors.response.use(
   }
 )
 
-function extractData<T>(response: AxiosResponse<{ status: string; data: T }>): T {
-  return response.data.data
+function extractData<T>(response: AxiosResponse<{ status: string; data: T } | T>): T {
+  const data = response.data as { status?: string; data?: T } & T
+  // Handle both formats: {status: "success", data: T} and direct T
+  if (data && typeof data === 'object' && 'status' in data && 'data' in data) {
+    return data.data as T
+  }
+  return data as T
 }
 
 function mapPaginationParams(params?: Record<string, unknown>): Record<string, unknown> {
