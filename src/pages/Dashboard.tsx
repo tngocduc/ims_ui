@@ -23,14 +23,14 @@ function Dashboard() {
     try {
       setLoading(true)
       const [usersRes, devicesRes] = await Promise.all([
-        tenantUserApi.list({ limit: 1 }),
-        deviceApi.list({ limit: 1 }),
+        tenantUserApi.list({ pageSize: 1 }),
+        deviceApi.listStatus({ pageSize: 1 }),
       ])
       
       setStats({
-        totalUsers: usersRes.data.total || 0,
-        totalDevices: devicesRes.data.total || 0,
-        onlineDevices: devicesRes.data.data?.filter((d: { status: string }) => d.status === 'online').length || 0,
+        totalUsers: usersRes.count || 0,
+        totalDevices: devicesRes.count || 0,
+        onlineDevices: devicesRes.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
         totalBalance: 0,
       })
     } catch (err) {

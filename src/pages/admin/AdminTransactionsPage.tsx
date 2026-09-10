@@ -22,7 +22,7 @@ interface Transaction {
   time: string
 }
 
-interface Tenant {
+interface TenantOption {
   id: number
   name: string
 }
@@ -37,11 +37,11 @@ const paymentMethodLabels: Record<string, string> = {
 }
 
 function AdminTransactionsPage() {
-  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [tenants, setTenants] = useState<TenantOption[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
+  const [pagination, setPagination] = useState({ pageIndex: 1, pageSize: 20, total: 0, totalPages: 0 })
   const [filters, setFilters] = useState({
     tenantId: '',
     search: '',
@@ -56,8 +56,8 @@ function AdminTransactionsPage() {
 
   const fetchTenants = async () => {
     try {
-      const response = await tenantApi.list({ limit: 100 })
-      setTenants(response.data.data || [])
+      const response = await tenantApi.list({ pageSize: 100 })
+      setTenants(response.items || [])
     } catch (err) {
       console.error('Không thể tải danh sách tenant', err)
     }
@@ -67,7 +67,8 @@ function AdminTransactionsPage() {
     try {
       setLoading(true)
       setError('')
-      // Transaction API doesn't have list endpoint, using mock data for now
+      // Note: Transaction list endpoint would need to be implemented in backend
+      // For now using mock data
       setTransactions([])
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
     } catch (err) {
@@ -80,19 +81,19 @@ function AdminTransactionsPage() {
 
   useEffect(() => {
     fetchTransactions()
-  }, [pagination.page, pagination.limit, filters.tenantId])
+  }, [pagination.pageIndex, pagination.pageSize, filters.tenantId])
 
-  const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, page }))
+  const handlePageChange = (pageIndex: number) => {
+    setPagination(prev => ({ ...prev, pageIndex }))
   }
 
-  const handlePageSizeChange = (limit: number) => {
-    setPagination(prev => ({ ...prev, limit, page: 1 }))
+  const handlePageSizeChange = (pageSize: number) => {
+    setPagination(prev => ({ ...prev, pageSize, pageIndex: 1 }))
   }
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
-    setPagination(prev => ({ ...prev, page: 1 }))
+    setPagination(prev => ({ ...prev, pageIndex: 1 }))
   }
 
   return (
@@ -217,11 +218,11 @@ function AdminTransactionsPage() {
               </div>
               <CardFooter className="flex items-center justify-between">
                 <div className="text-sm text-text-muted font-mono">
-                  Hiển thị {(pagination.page - 1) * pagination.limit + 1} đến {Math.min(pagination.page * pagination.limit, pagination.total)} của {pagination.total}
+                  Hiển thị {(pagination.pageIndex - 1) * pagination.pageSize + 1} đến {Math.min(pagination.pageIndex * pagination.pageSize, pagination.total)} của {pagination.total}
                 </div>
                 <div className="flex items-center gap-2">
                   <select
-                    value={pagination.limit}
+                    value={pagination.pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                     className="h-8 px-2 text-sm font-mono bg-bg-surface border border-border-subtle rounded-[4px] focus:outline-none focus:border-accent"
                   >
@@ -231,20 +232,20 @@ function AdminTransactionsPage() {
                     <option value={100}>100</option>
                   </select>
                   <nav className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(1)} disabled={pagination.page === 1}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(1)} disabled={pagination.pageIndex === 1}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 3l-4 4 4 4M6 3l4 4-4 4"/></svg>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.pageIndex - 1)} disabled={pagination.pageIndex === 1}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 3l-4 4 4 4"/></svg>
                     </Button>
                     {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                      let page = Math.max(1, pagination.page - 2) + i
+                      let page = Math.max(1, pagination.pageIndex - 2) + i
                       if (page > pagination.totalPages) page = pagination.totalPages - 4 + i
                       if (page < 1) page = 1
                       return (
                         <Button
                           key={page}
-                          variant={pagination.page === page ? 'primary' : 'ghost'}
+                          variant={pagination.pageIndex === page ? 'primary' : 'ghost'}
                           size="sm"
                           onClick={() => handlePageChange(page)}
                         >
@@ -252,10 +253,10 @@ function AdminTransactionsPage() {
                         </Button>
                       )
                     })}
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page === pagination.totalPages}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.pageIndex + 1)} disabled={pagination.pageIndex === pagination.totalPages}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 3l4 4-4 4"/></svg>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.totalPages)} disabled={pagination.page === pagination.totalPages}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.totalPages)} disabled={pagination.pageIndex === pagination.totalPages}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 3l4 4-4 4M8 3l-4 4 4 4"/></svg>
                     </Button>
                   </nav>

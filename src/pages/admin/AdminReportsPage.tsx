@@ -23,6 +23,18 @@ interface Tenant {
   name: string
 }
 
+interface ReportResponse {
+  tenant_id: number
+  total_sales: string
+  transaction_count: number
+  external_total_sales: string
+  external_transaction_count: number
+  by_device: Array<{ device_uuid: string; total_sales: string; transaction_count: number }>
+  by_external_device: Array<{ device_sn: string; total_sales: string; transaction_count: number }>
+  by_payment_method: Array<{ payment_method: string; total_sales: string; transaction_count: number }>
+  by_external_payment_method: Array<{ pay_method: string; total_sales: string; transaction_count: number }>
+}
+
 function AdminReportsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [reportData, setReportData] = useState<ReportItem[]>([])
@@ -48,8 +60,8 @@ function AdminReportsPage() {
 
   const fetchTenants = async () => {
     try {
-      const response = await tenantApi.list({ limit: 100 })
-      setTenants(response.data.data || [])
+      const response = await tenantApi.list({ pageSize: 100 })
+      setTenants(response.items || [])
     } catch (err) {
       console.error('Không thể tải danh sách tenant', err)
     }
@@ -65,22 +77,58 @@ function AdminReportsPage() {
       if (filters.dateFrom) params.date_from = filters.dateFrom
       if (filters.dateTo) params.date_to = filters.dateTo
       
-      const response = await reportApi.sales(params)
-      setReportData(response.data.data || [])
+      const response = await reportApi.adminSales(Number(filters.tenantId) || 0, params)
+      const data = response as ReportResponse
       
-      const data = response.data.data || []
-      const totalSales = data.reduce((sum: number, item: ReportItem) => sum + parseFloat(item.total_sales || '0'), 0)
-      const totalTransactions = data.reduce((sum: number, item: ReportItem) => sum + (item.transaction_count || 0), 0)
+      // Transform the response to match the expected format
+      const items: ReportItem[] = [
+        ...data.by_device.map(d => ({
+          device_uuid: d.device_uuid,
+          payment_method: 'all',
+          transaction_count: d.transaction_count,
+          total_sales: d.total_sales,
+          tenant: { name: '' },
+        })),
+        ...data.by_external_device.map(d => ({
+          device_uuid: d.device_sn,
+          payment_method: 'all',
+          transaction_count: d.transaction_count,
+          total_sales: d.total_sales,
+          tenant: { name: '' },
+        })),
+        ...data.by_payment_method.map(p => ({
+          device_uuid: 'all',
+          payment_method: p.payment_method,
+          transaction_count: p.transaction_count,
+          total_sales: p.total_sales,
+          tenant: { name: '' },
+        })),
+      ]
+      
+      setReportData(items)
+      
+      const totalSales = parseFloat(data.total_sales || '0') + parseFloat(data.external_total_sales || '0')
+      const totalTransactions = data.transaction_count + data.external_transaction_count
       
       const byPaymentMethod: Record<string, number> = {}
       const byDevice: Record<string, number> = {}
       const byTenant: Record<string, number> = {}
       
-      data.forEach((item: ReportItem) => {
-        byPaymentMethod[item.payment_method] = (byPaymentMethod[item.payment_method] || 0) + parseFloat(item.total_sales || '0')
-        byDevice[item.device_uuid] = (byDevice[item.device_uuid] || 0) + parseFloat(item.total_sales || '0')
-        byTenant[item.tenant?.name || 'Unknown'] = (byTenant[item.tenant?.name || 'Unknown'] || 0) + parseFloat(item.total_sales || '0')
+      data.by_payment_method.forEach(item => {
+        byPaymentMethod[item.payment_method] = parseFloat(item.total_sales || '0')
       })
+      data.by_external_payment_method.forEach(item => {
+        byPaymentMethod[item.pay_method] = (byPaymentMethod[item.pay_method] || 0) + parseFloat(item.total_sales || '0')
+      })
+      data.by_device.forEach(item => {
+        byDevice[item.device_uuid] = parseFloat(item.total_sales || '0')
+      })
+      data.by_external_device.forEach(item => {
+        byDevice[item.device_sn] = (byDevice[item.device_sn] || 0) + parseFloat(item.total_sales || '0')
+      })
+      
+      // For admin report, we don't have tenant breakdown in the response
+      // This would need a separate endpoint or different data structure
       
       setSummary({ totalSales, totalTransactions, byPaymentMethod, byDevice, byTenant })
     } catch (err) {
@@ -92,7 +140,9 @@ function AdminReportsPage() {
   }
 
   useEffect(() => {
-    fetchReport()
+    if (filters.tenantId) {
+      fetchReport()
+    }
   }, [filters.tenantId, filters.deviceUuid, filters.dateFrom, filters.dateTo])
 
   const handleFilterChange = (key: string, value: string) => {

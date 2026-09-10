@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { deviceApi } from '@/lib/api'
+import { deviceApi, Device } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -7,25 +7,19 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
 import { Plus, Search, Settings, Edit, Server } from 'lucide-react'
 
-interface Device {
-  uuid: string
-  type: string
-  firmware: string
-  status: string
-  register_date: string | null
-  last_seen_at: string | null
-}
-
 interface DeviceResponse {
-  data: Device[]
-  total: number
+  items: Device[]
+  count: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
 }
 
 function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
+  const [pagination, setPagination] = useState({ pageIndex: 1, pageSize: 20, total: 0, totalPages: 0 })
   const [search, setSearch] = useState('')
 
   const fetchDevices = async () => {
@@ -33,18 +27,18 @@ function DevicesPage() {
       setLoading(true)
       setError('')
       const params: Record<string, string | number> = {
-        page: pagination.page,
-        limit: pagination.limit,
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
       }
       if (search) params.search = search
       
       const response = await deviceApi.list(params)
-      const data = response.data as DeviceResponse
-      setDevices(data.data || [])
+      const data = response as DeviceResponse
+      setDevices(data.items || [])
       setPagination(prev => ({
         ...prev,
-        total: data.total || 0,
-        totalPages: Math.ceil((data.total || 0) / pagination.limit),
+        total: data.count || 0,
+        totalPages: data.totalPages || 0,
       }))
     } catch (err) {
       setError('Khong the tai danh sach thiet bi')
@@ -56,19 +50,19 @@ function DevicesPage() {
 
   useEffect(() => {
     fetchDevices()
-  }, [pagination.page, pagination.limit, search])
+  }, [pagination.pageIndex, pagination.pageSize, search])
 
-  const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, page }))
+  const handlePageChange = (pageIndex: number) => {
+    setPagination(prev => ({ ...prev, pageIndex }))
   }
 
-  const handlePageSizeChange = (limit: number) => {
-    setPagination(prev => ({ ...prev, limit, page: 1 }))
+  const handlePageSizeChange = (pageSize: number) => {
+    setPagination(prev => ({ ...prev, pageSize, pageIndex: 1 }))
   }
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 }))
+    setPagination(prev => ({ ...prev, pageIndex: 1 }))
   }
 
   return (
@@ -140,7 +134,7 @@ function DevicesPage() {
                       devices.map((device) => (
                         <tr key={device.uuid} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
                           <td className="px-4 py-3"><CodeBlock code={device.uuid} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3">{device.type}</td>
+                          <td className="px-4 py-3">{device.type_name}</td>
                           <td className="px-4 py-3"><CodeBlock code={device.firmware} lang="text" className="inline" /></td>
                           <td className="px-4 py-3">
                             <StatusBadge status={
@@ -165,11 +159,11 @@ function DevicesPage() {
               </div>
               <CardFooter className="flex items-center justify-between">
                 <div className="text-sm text-text-muted font-mono">
-                  Hiển thị {(pagination.page - 1) * pagination.limit + 1} đến {Math.min(pagination.page * pagination.limit, pagination.total)} của {pagination.total}
+                  Hiển thị {(pagination.pageIndex - 1) * pagination.pageSize + 1} đến {Math.min(pagination.pageIndex * pagination.pageSize, pagination.total)} của {pagination.total}
                 </div>
                 <div className="flex items-center gap-2">
                   <select
-                    value={pagination.limit}
+                    value={pagination.pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                     className="h-8 px-2 text-sm font-mono bg-bg-surface border border-border-subtle rounded-[4px] focus:outline-none focus:border-accent"
                   >
@@ -179,20 +173,20 @@ function DevicesPage() {
                     <option value={100}>100</option>
                   </select>
                   <nav className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(1)} disabled={pagination.page === 1}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(1)} disabled={pagination.pageIndex === 1}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 3l-4 4 4 4M6 3l4 4-4 4"/></svg>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.pageIndex - 1)} disabled={pagination.pageIndex === 1}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 3l-4 4 4 4"/></svg>
                     </Button>
                     {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                      let page = Math.max(1, pagination.page - 2) + i
+                      let page = Math.max(1, pagination.pageIndex - 2) + i
                       if (page > pagination.totalPages) page = pagination.totalPages - 4 + i
                       if (page < 1) page = 1
                       return (
                         <Button
                           key={page}
-                          variant={pagination.page === page ? 'primary' : 'ghost'}
+                          variant={pagination.pageIndex === page ? 'primary' : 'ghost'}
                           size="sm"
                           onClick={() => handlePageChange(page)}
                         >
@@ -200,10 +194,10 @@ function DevicesPage() {
                         </Button>
                       )
                     })}
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page === pagination.totalPages}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.pageIndex + 1)} disabled={pagination.pageIndex === pagination.totalPages}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 3l4 4-4 4"/></svg>
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.totalPages)} disabled={pagination.page === pagination.totalPages}>
+                    <Button variant="ghost" size="sm" onClick={() => handlePageChange(pagination.totalPages)} disabled={pagination.pageIndex === pagination.totalPages}>
                       <svg className="h-4 w-4" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 3l4 4-4 4M8 3l-4 4 4 4"/></svg>
                     </Button>
                   </nav>

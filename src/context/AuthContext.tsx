@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const response = await authApi.me()
-      setUser(response.data)
+      setUser(response)
     } catch {
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string, type: 'tenant' | 'admin' = 'tenant') => {
     const response = await authApi.login(username, password)
-    const { access, refresh } = response.data
+    const { access, refresh } = response
     localStorage.setItem('access_token', access)
     localStorage.setItem('refresh_token', refresh)
     setLoginType(type)

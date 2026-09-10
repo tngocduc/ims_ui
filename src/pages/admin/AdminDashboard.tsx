@@ -25,16 +25,16 @@ function AdminDashboard() {
     try {
       setLoading(true)
       const [tenantsRes, usersRes, devicesRes] = await Promise.all([
-        tenantApi.list({ limit: 1 }),
-        tenantUserApi.list({ limit: 1 }),
-        deviceApi.list({ limit: 1 }),
+        tenantApi.list({ pageSize: 1 }),
+        tenantUserApi.list({ pageSize: 1 }),
+        deviceApi.listStatus({ pageSize: 1 }),
       ])
       
       setStats({
-        totalTenants: tenantsRes.data.total || 0,
-        totalUsers: usersRes.data.total || 0,
-        totalDevices: devicesRes.data.total || 0,
-        onlineDevices: devicesRes.data.data?.filter((d: { status: string }) => d.status === 'online').length || 0,
+        totalTenants: tenantsRes.count || 0,
+        totalUsers: usersRes.count || 0,
+        totalDevices: devicesRes.count || 0,
+        onlineDevices: devicesRes.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
       })
     } catch (err) {
       console.error(err)
