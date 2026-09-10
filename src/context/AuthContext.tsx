@@ -9,7 +9,8 @@ interface User {
   last_name: string
   is_staff: boolean
   is_superuser: boolean
-  tenant?: { id: number; name: string }
+  role: string
+  tenant?: { id: number; name: string; address: string; extra_info: Record<string, unknown>; is_active: boolean; created_at: string; updated_at: string }
 }
 
 interface AuthContextType {
@@ -80,6 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginType(null)
   }
 
+  const isAdmin = user?.is_staff || user?.is_superuser || user?.role === 'admin'
+  const isTenantAdmin = user?.role === 'tenant_admin'
+
   const value: AuthContextType = {
     user,
     loading,
@@ -88,8 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionLogin,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.is_staff || user?.is_superuser || false,
-    isTenantAdmin: loginType === 'tenant',
+    isAdmin,
+    isTenantAdmin,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

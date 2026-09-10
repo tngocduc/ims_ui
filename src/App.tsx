@@ -14,7 +14,7 @@ import AdminDevicesPage from '@/pages/admin/AdminDevicesPage'
 import AdminTransactionsPage from '@/pages/admin/AdminTransactionsPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
 
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: ('admin' | 'tenant')[] }) {
+function ProtectedRoute({ children, allowedRoles, loginPath }: { children: React.ReactNode; allowedRoles: ('admin' | 'tenant')[]; loginPath: string }) {
   const { isAuthenticated, isAdmin, isTenantAdmin, loading } = useAuth()
 
   if (loading) {
@@ -26,7 +26,7 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={isAdmin ? '/admin' : '/'} replace />
+    return <Navigate to={loginPath} replace />
   }
 
   if (allowedRoles.includes('admin') && !isAdmin) {
@@ -41,7 +41,7 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, isAdmin, isTenantAdmin, loading } = useAuth()
 
   if (loading) {
     return (
@@ -52,6 +52,12 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
+    if (isAdmin) {
+      return <Navigate to="/admin/dashboard" replace />
+    }
+    if (isTenantAdmin) {
+      return <Navigate to="/dashboard" replace />
+    }
     return <Navigate to="/dashboard" replace />
   }
 
@@ -82,7 +88,7 @@ function AppRoutes() {
       {/* Protected tenant routes */}
       <Route
         element={
-          <ProtectedRoute allowedRoles={['tenant']}>
+          <ProtectedRoute allowedRoles={['tenant']} loginPath="/">
             <Layout />
           </ProtectedRoute>
         }
@@ -97,7 +103,7 @@ function AppRoutes() {
       {/* Protected admin routes */}
       <Route
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin']} loginPath="/admin">
             <Layout />
           </ProtectedRoute>
         }
