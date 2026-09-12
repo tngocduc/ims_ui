@@ -8,21 +8,33 @@ interface CodeBlockProps {
   lang?: string
   className?: string
   showLineNumbers?: boolean
+  skipHighlighting?: boolean
 }
 
-export function CodeBlock({ code, lang = 'json', className, showLineNumbers = false }: CodeBlockProps) {
+export function CodeBlock({ code, lang = 'json', className, showLineNumbers = false, skipHighlighting }: CodeBlockProps) {
   const [html, setHtml] = React.useState('')
   const [copied, setCopied] = React.useState(false)
 
+  // Default skipHighlighting for single-line code (inline usage)
+  const shouldSkipHighlighting = skipHighlighting ?? !code.includes('\n')
+
   React.useEffect(() => {
+    if (shouldSkipHighlighting) {
+      return
+    }
     let mounted = true
     getHighlighter({ themes: ['github-dark'], langs: [lang] }).then((highlighter) => {
       if (mounted) {
-        setHtml(highlighter.codeToHtml(code, { lang, theme: 'github-dark', lineNumbers: showLineNumbers }))
+        setHtml(highlighter.codeToHtml(code, { 
+          lang, 
+          theme: 'github-dark', 
+          lineNumbers: showLineNumbers,
+          defaultColor: false,
+        }))
       }
     })
     return () => { mounted = false }
-  }, [code, lang, showLineNumbers])
+  }, [code, lang, showLineNumbers, skipHighlighting])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code)
@@ -30,7 +42,7 @@ export function CodeBlock({ code, lang = 'json', className, showLineNumbers = fa
     setTimeout(() => setCopied(false), 2000)
   }
 
-  if (!html) {
+  if (!html || skipHighlighting) {
     return (
       <pre className={cn('p-4 font-mono text-sm bg-bg-base border border-border-subtle rounded-[4px] overflow-x-auto', className)}>
         <code>{code}</code>
