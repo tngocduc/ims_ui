@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { tenantApi, tenantUserApi, deviceApi } from '@/lib/api'
+import { tenantApi, tenantUserApi, deviceApi, externalDeviceApi } from '@/lib/api'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Button } from '@/components/ui/button'
-import { Plus, Server, BarChart2, ShieldCheck } from 'lucide-react'
+import { Plus, Server, BarChart2, ShieldCheck, FileText, CreditCard } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
 
@@ -11,9 +11,10 @@ function AdminDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState({
     totalTenants: 0,
-    totalUsers: 0,
+    totalTenantAdmins: 0,
     totalDevices: 0,
     onlineDevices: 0,
+    totalExternalDevices: 0,
   })
   const [loading, setLoading] = useState(true)
 
@@ -24,17 +25,19 @@ function AdminDashboard() {
   const fetchStats = async () => {
     try {
       setLoading(true)
-      const [tenantsRes, usersRes, devicesRes] = await Promise.all([
+      const [tenantsRes, adminsRes, devicesRes, externalDevicesRes] = await Promise.all([
         tenantApi.list({ pageSize: 1 }),
-        tenantUserApi.list({ pageSize: 1 }),
+        tenantApi.listAllAdmins({ pageSize: 1 }),
         deviceApi.listStatus({ pageSize: 1 }),
+        externalDeviceApi.list({ pageSize: 1 }),
       ])
       
       setStats({
         totalTenants: tenantsRes.count || 0,
-        totalUsers: usersRes.count || 0,
+        totalTenantAdmins: adminsRes.count || 0,
         totalDevices: devicesRes.count || 0,
         onlineDevices: devicesRes.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
+        totalExternalDevices: externalDevicesRes.count || 0,
       })
     } catch (err) {
       console.error(err)
@@ -61,11 +64,12 @@ function AdminDashboard() {
       </div>
 
       <SectionLabel>thống kê</SectionLabel>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <MetricCard value={stats.totalTenants} label="Tổng tenant" />
-        <MetricCard value={stats.totalUsers} label="Tổng người dùng" />
-        <MetricCard value={stats.totalDevices} label="Tổng thiết bị" />
+        <MetricCard value={stats.totalTenantAdmins} label="Admin Tenant" />
+        <MetricCard value={stats.totalDevices} label="Thiết bị" />
         <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" />
+        <MetricCard value={stats.totalExternalDevices} label="Thiết bị ngoại vi" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -74,7 +78,7 @@ function AdminDashboard() {
             <CardTitle>Thao tác nhanh</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Button variant="primary" className="h-auto py-4 flex flex-col items-center gap-2">
                 <Plus className="h-6 w-6" />
                 <span className="text-sm font-mono">Tạo tenant</span>
@@ -86,6 +90,10 @@ function AdminDashboard() {
               <Button variant="secondary" className="h-auto py-4 flex flex-col items-center gap-2">
                 <Server className="h-6 w-6" />
                 <span className="text-sm font-mono">Đăng ký thiết bị</span>
+              </Button>
+              <Button variant="secondary" className="h-auto py-4 flex flex-col items-center gap-2">
+                <FileText className="h-6 w-6" />
+                <span className="text-sm font-mono">Thiết bị ngoại vi</span>
               </Button>
               <Button variant="secondary" className="h-auto py-4 flex flex-col items-center gap-2">
                 <BarChart2 className="h-6 w-6" />

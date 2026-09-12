@@ -152,6 +152,85 @@ export interface User {
   tenant?: { id: number; name: string; address: string; extra_info: Record<string, unknown>; is_active: boolean; created_at: string; updated_at: string }
 }
 
+export interface TenantAdmin {
+  auth_user: {
+    id: number
+    username: string
+    email: string
+    first_name: string
+    last_name: string
+    is_staff: boolean
+    is_superuser: boolean
+    role: string
+    tenant: User['tenant']
+  }
+  tenant_admin: {
+    id: number
+    tenant_id: number
+    is_active: boolean
+  }
+}
+
+export interface ExternalDevice {
+  id: number
+  tenant_id: number
+  device_sn: string
+  name: string
+  location: string
+  is_active: boolean
+  extra_info: Record<string, unknown>
+  created_at: string
+  updated_at: string
+  stats: {
+    transaction_count: number
+    paid_transaction_count: number
+    total_sales: string
+  }
+}
+
+export interface ExternalDeviceTransaction {
+  id: number
+  raw_data: Record<string, unknown>
+  tenant_id: number
+  external_device_id: number
+  order_id: number
+  order_no: string
+  device_sn: string
+  temina_id: string
+  business_temina_id: string
+  price: string
+  pay_amount: string
+  pay_method: string
+  pay_status: number
+  refund_status: number
+  total_amount: string
+  modify_at: string
+  create_at: string
+  created_at: string
+}
+
+export interface DeviceType {
+  name: string
+  default_config: Record<string, unknown>
+  description: string
+  status: string
+  created_at: string
+  updated_at: string
+  device_count: number
+}
+
+export interface SalesReport {
+  tenant_id: number
+  total_sales: string
+  transaction_count: number
+  external_total_sales: string
+  external_transaction_count: number
+  by_device: Array<{ device_uuid: string; total_sales: string; transaction_count: number }>
+  by_external_device: Array<{ device_sn: string; total_sales: string; transaction_count: number }>
+  by_payment_method: Array<{ payment_method: string; total_sales: string; transaction_count: number }>
+  by_external_payment_method: Array<{ pay_method: string; total_sales: string; transaction_count: number }>
+}
+
 export const authApi = {
   login: (username: string, password: string) =>
     api.post<{ status: string; data: { access: string; refresh: string } }>('/auth/token/pair', { username, password }).then(extractData),

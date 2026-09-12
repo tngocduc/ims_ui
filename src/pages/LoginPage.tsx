@@ -6,15 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Server, Eye, EyeOff } from 'lucide-react'
 
 function LoginPage() {
-  const { login, sessionLogin } = useAuth()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
-    tenant_id: '',
     username: '',
     password: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isSessionLogin, setIsSessionLogin] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,11 +27,7 @@ function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      if (isSessionLogin) {
-        await sessionLogin(formData.username, formData.password, 'tenant')
-      } else {
-        await login(formData.username, formData.password, 'tenant')
-      }
+      await login(formData.username, formData.password, 'tenant', rememberMe)
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } }
       setError(axiosError.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.')
@@ -54,16 +49,6 @@ function LoginPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-              <Input
-                label="ID Tenant"
-                name="tenant_id"
-                value={formData.tenant_id}
-                onChange={handleChange}
-                placeholder="Nhập ID tenant"
-                required
-                disabled={loading}
-                autoComplete="organization"
-              />
               <Input
                 label="Tên đăng nhập"
                 name="username"
@@ -106,12 +91,12 @@ function LoginPage() {
               <label className="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={isSessionLogin}
-                  onChange={(e) => setIsSessionLogin(e.target.checked)}
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 accent-accent border-border-subtle rounded-[4px] bg-bg-surface focus:ring-2 focus:ring-accent/20"
                   disabled={loading}
                 />
-                <span>Đăng nhập phiên (cookie trình duyệt)</span>
+                <span>Ghi nhớ đăng nhập</span>
               </label>
 
               <Button type="submit" className="w-full" loading={loading}>

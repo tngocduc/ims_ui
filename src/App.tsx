@@ -8,9 +8,13 @@ import UsersPage from '@/pages/UsersPage'
 import DevicesPage from '@/pages/DevicesPage'
 import TransactionsPage from '@/pages/TransactionsPage'
 import ReportsPage from '@/pages/ReportsPage'
+import RfidCardsPage from '@/pages/RfidCardsPage'
+import ExternalDevicesPage from '@/pages/ExternalDevicesPage'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
-import AdminUsersPage from '@/pages/admin/AdminUsersPage'
+import AdminTenantsPage from '@/pages/admin/AdminTenantsPage'
+import AdminTenantAdminsPage from '@/pages/admin/AdminTenantAdminsPage'
 import AdminDevicesPage from '@/pages/admin/AdminDevicesPage'
+import AdminExternalDevicesPage from '@/pages/admin/AdminExternalDevicesPage'
 import AdminTransactionsPage from '@/pages/admin/AdminTransactionsPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
 
@@ -85,7 +89,7 @@ function AppRoutes() {
         }
       />
 
-      {/* Protected tenant routes */}
+      {/* Protected tenant admin routes */}
       <Route
         element={
           <ProtectedRoute allowedRoles={['tenant']} loginPath="/">
@@ -95,7 +99,9 @@ function AppRoutes() {
       >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/rfid-cards" element={<RfidCardsPage />} />
         <Route path="/devices" element={<DevicesPage />} />
+        <Route path="/external-devices" element={<ExternalDevicesPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
       </Route>
@@ -109,8 +115,10 @@ function AppRoutes() {
         }
       >
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/tenants" element={<AdminTenantsPage />} />
+        <Route path="/admin/tenant-admins" element={<AdminTenantAdminsPage />} />
         <Route path="/admin/devices" element={<AdminDevicesPage />} />
+        <Route path="/admin/external-devices" element={<AdminExternalDevicesPage />} />
         <Route path="/admin/transactions" element={<AdminTransactionsPage />} />
         <Route path="/admin/reports" element={<AdminReportsPage />} />
       </Route>

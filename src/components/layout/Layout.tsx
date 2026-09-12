@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, NavLink, Outlet } from 'react-router-dom'
-import { ChevronLeft, LayoutDashboard, Users, Server, Activity, BarChart2, LogOut, ChevronRight } from 'lucide-react'
+import { ChevronLeft, LayoutDashboard, Users, Server, Activity, BarChart2, LogOut, ChevronRight, CreditCard, FileText } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -12,14 +12,18 @@ export function Layout() {
 
   const navItems = isAdmin ? [
     { path: '/admin/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
-    { path: '/admin/users', label: 'Người dùng', icon: Users },
+    { path: '/admin/tenants', label: 'Tenants', icon: Users },
+    { path: '/admin/tenant-admins', label: 'Admin Tenant', icon: CreditCard },
     { path: '/admin/devices', label: 'Thiết bị', icon: Server },
+    { path: '/admin/external-devices', label: 'Thiết bị ngoại vi', icon: FileText },
     { path: '/admin/transactions', label: 'Giao dịch', icon: Activity },
     { path: '/admin/reports', label: 'Báo cáo', icon: BarChart2 },
   ] : isTenantAdmin ? [
     { path: '/dashboard', label: 'Bảng điều khiển', icon: LayoutDashboard },
     { path: '/users', label: 'Người dùng', icon: Users },
+    { path: '/rfid-cards', label: 'Thẻ RFID', icon: CreditCard },
     { path: '/devices', label: 'Thiết bị', icon: Server },
+    { path: '/external-devices', label: 'Thiết bị ngoại vi', icon: FileText },
     { path: '/transactions', label: 'Giao dịch', icon: Activity },
     { path: '/reports', label: 'Báo cáo', icon: BarChart2 },
   ] : []

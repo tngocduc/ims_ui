@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 function AdminLoginPage() {
-  const { login, sessionLogin } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     username: '',
@@ -15,7 +15,7 @@ function AdminLoginPage() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isSessionLogin, setIsSessionLogin] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,11 +29,7 @@ function AdminLoginPage() {
     setLoading(true)
     setError('')
     try {
-      if (isSessionLogin) {
-        await sessionLogin(formData.username, formData.password, 'admin')
-      } else {
-        await login(formData.username, formData.password, 'admin')
-      }
+      await login(formData.username, formData.password, 'admin', rememberMe)
       navigate('/admin/dashboard')
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } }
@@ -101,25 +97,25 @@ function AdminLoginPage() {
               <label className="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={isSessionLogin}
-                  onChange={(e) => setIsSessionLogin(e.target.checked)}
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 accent-accent border-border-subtle rounded-[4px] bg-bg-surface focus:ring-2 focus:ring-accent/20"
                   disabled={loading}
                 />
-                <span>Đăng nhập phiên (cookie trình duyệt)</span>
+                <span>Ghi nhớ đăng nhập</span>
               </label>
 
               <Button type="submit" className="w-full" loading={loading}>
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </Button>
-            </form>
 
-            <div className="mt-6 text-center">
-              <a href="/" className="text-sm font-mono text-text-muted hover:text-accent transition-colors flex items-center justify-center gap-1.5">
-                <ArrowLeft className="h-4 w-4" />
-                Quay lại đăng nhập Tenant
-              </a>
-            </div>
+              <div className="mt-6 text-center">
+                <a href="/" className="text-sm font-mono text-text-muted hover:text-accent transition-colors flex items-center justify-center gap-1.5">
+                  <ArrowLeft className="h-4 w-4" />
+                  Quay lại đăng nhập Tenant
+                </a>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </div>
