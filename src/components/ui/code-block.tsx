@@ -7,9 +7,10 @@ interface CodeBlockProps {
   code: string
   lang?: string
   className?: string
+  showLineNumbers?: boolean
 }
 
-export function CodeBlock({ code, lang = 'json', className }: CodeBlockProps) {
+export function CodeBlock({ code, lang = 'json', className, showLineNumbers = false }: CodeBlockProps) {
   const [html, setHtml] = React.useState('')
   const [copied, setCopied] = React.useState(false)
 
@@ -17,11 +18,11 @@ export function CodeBlock({ code, lang = 'json', className }: CodeBlockProps) {
     let mounted = true
     getHighlighter({ themes: ['github-dark'], langs: [lang] }).then((highlighter) => {
       if (mounted) {
-        setHtml(highlighter.codeToHtml(code, { lang, theme: 'github-dark' }))
+        setHtml(highlighter.codeToHtml(code, { lang, theme: 'github-dark', lineNumbers: showLineNumbers }))
       }
     })
     return () => { mounted = false }
-  }, [code, lang])
+  }, [code, lang, showLineNumbers])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code)

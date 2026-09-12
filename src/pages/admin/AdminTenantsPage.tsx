@@ -229,7 +229,7 @@ function AdminTenantsPage() {
                     ) : (
                       tenants.map((tenant) => (
                         <tr key={tenant.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={String(tenant.id)} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={String(tenant.id)} lang="text" className="inline" showLineNumbers={false} /></td>
                           <td className="px-4 py-3 font-medium text-text-primary">{tenant.name}</td>
                           <td className="px-4 py-3 text-text-muted">{tenant.address || '—'}</td>
                           <td className="px-4 py-3">{tenant.admin_count}</td>
