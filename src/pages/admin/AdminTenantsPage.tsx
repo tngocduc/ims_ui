@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { tenantApi, Tenant } from '@/lib/api'
+import { tenantApi, vietqrApi, Tenant } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Plus, Search, Edit, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Search, Edit, CheckCircle, XCircle, Settings, CreditCard } from 'lucide-react'
 
 interface TenantResponse {
   items: Tenant[]
@@ -32,6 +32,18 @@ function AdminTenantsPage() {
   })
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
+  // VietQR config modal
+  const [showVietqrModal, setShowVietqrModal] = useState(false)
+  const [vietqrTenant, setVietqrTenant] = useState<Tenant | null>(null)
+  const [vietqrConfig, setVietqrConfig] = useState<{ vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string } | null>(null)
+  const [vietqrFormData, setVietqrFormData] = useState({
+    vietqr_bank: '',
+    vietqr_account_number: '',
+    vietqr_account_name: '',
+  })
+  const [vietqrError, setVietqrError] = useState('')
+  const [vietqrSuccess, setVietqrSuccess] = useState('')
+  const [vietqrLoading, setVietqrLoading] = useState(false)
 
   useEffect(() => {
     fetchTenants()
@@ -96,6 +108,57 @@ function AdminTenantsPage() {
     setShowCreateModal(false)
     setShowEditModal(false)
     setEditingTenant(null)
+    setShowVietqrModal(false)
+    setVietqrTenant(null)
+    setVietqrConfig(null)
+    setVietqrFormData({ vietqr_bank: '', vietqr_account_number: '', vietqr_account_name: '' })
+    setVietqrError('')
+    setVietqrSuccess('')
+  }
+
+  const openVietqrModal = async (tenant: Tenant) => {
+    setVietqrTenant(tenant)
+    setVietqrError('')
+    setVietqrSuccess('')
+    setVietqrLoading(true)
+    try {
+      const config = await vietqrApi.adminGetConfig(tenant.id)
+      setVietqrConfig(config)
+      setVietqrFormData({
+        vietqr_bank: config.vietqr_bank || '',
+        vietqr_account_number: config.vietqr_account_number || '',
+        vietqr_account_name: config.vietqr_account_name || '',
+      })
+    } catch (err) {
+      setVietqrError('Không thể tải cấu hình VietQR')
+      console.error(err)
+    } finally {
+      setVietqrLoading(false)
+      setShowVietqrModal(true)
+    }
+  }
+
+  const handleVietqrSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!vietqrTenant) return
+    if (!vietqrFormData.vietqr_bank || !vietqrFormData.vietqr_account_number || !vietqrFormData.vietqr_account_name) {
+      setVietqrError('Vui lòng điền đầy đủ thông tin')
+      return
+    }
+    setVietqrLoading(true)
+    setVietqrError('')
+    setVietqrSuccess('')
+    try {
+      await vietqrApi.adminUpdateConfig(vietqrTenant.id, vietqrFormData)
+      setVietqrSuccess('Cập nhật cấu hình VietQR thành công')
+      const config = await vietqrApi.adminGetConfig(vietqrTenant.id)
+      setVietqrConfig(config)
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { message?: string } } }
+      setVietqrError(axiosError.response?.data?.message || 'Cập nhật thất bại')
+    } finally {
+      setVietqrLoading(false)
+    }
   }
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -212,6 +275,7 @@ function AdminTenantsPage() {
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Admin</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Người dùng</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
+                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">VietQR</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Ngày tạo</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thao tác</th>
@@ -233,10 +297,15 @@ function AdminTenantsPage() {
                           <td className="px-4 py-3 text-text-muted">{tenant.address || '—'}</td>
                           <td className="px-4 py-3">{tenant.admin_count}</td>
                           <td className="px-4 py-3">{tenant.user_count}</td>
-                          <td className="px-4 py-3">{tenant.device_count}</td>
-                          <td className="px-4 py-3">
-                            <StatusBadge status={tenant.is_active ? 'pass' : 'fail'} />
-                          </td>
+<td className="px-4 py-3">{tenant.device_count}</td>
+                            <td className="px-4 py-3">
+                              <Button variant="ghost" size="sm" onClick={() => openVietqrModal(tenant)} title="Cấu hình VietQR">
+                                <CreditCard className="h-4 w-4" />
+                              </Button>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge status={tenant.is_active ? 'pass' : 'fail'} />
+                            </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(tenant.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -374,6 +443,94 @@ function AdminTenantsPage() {
                 <Button type="button" variant="secondary" onClick={closeModals}>Hủy</Button>
                 <Button type="submit" loading={formLoading}>{formLoading ? 'Đang lưu...' : 'Lưu'}</Button>
               </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* VietQR Config Modal */}
+      {showVietqrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md">
+            <form onSubmit={handleVietqrSubmit} className="p-6 space-y-4">
+              <h2 className="text-xl font-medium">Cấu hình VietQR</h2>
+              {vietqrTenant && <p className="text-sm text-text-muted">Tenant: {vietqrTenant.name} (ID: {vietqrTenant.id})</p>}
+              {vietqrLoading && (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin h-8 w-8 border-2 border-accent border-t-transparent rounded-full" />
+                </div>
+              )}
+              {!vietqrLoading && (
+                <>
+                  <select
+                    name="vietqr_bank"
+                    value={vietqrFormData.vietqr_bank}
+                    onChange={(e) => setVietqrFormData(prev => ({ ...prev, vietqr_bank: e.target.value }))}
+                    disabled={vietqrLoading}
+                    className="w-full px-3 py-2 bg-bg-surface border border-border-subtle rounded-[4px] text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent disabled:opacity-50"
+                  >
+                    <option value="">Chọn ngân hàng</option>
+                    <option value="VIETCOMBANK">Vietcombank (VIETCOMBANK)</option>
+                    <option value="VIETINBANK">VietinBank (VIETINBANK)</option>
+                    <option value="BIDV">BIDV (BIDV)</option>
+                    <option value="AGRIBANK">Agribank (AGRIBANK)</option>
+                    <option value="TECHCOMBANK">Techcombank (TECHCOMBANK)</option>
+                    <option value="MBBANK">MB Bank (MBBANK)</option>
+                    <option value="ACB">ACB (ACB)</option>
+                    <option value="VPBANK">VPBank (VPBANK)</option>
+                    <option value="HDBANK">HDBank (HDBANK)</option>
+                    <option value="TPBANK">TPBank (TPBANK)</option>
+                    <option value="SCB">SCB (SCB)</option>
+                    <option value="BAC A BANK">Bac A Bank (BAC A BANK)</option>
+                    <option value="NAM A BANK">Nam A Bank (NAM A BANK)</option>
+                    <option value="OCB">OCB (OCB)</option>
+                    <option value="SHB">SHB (SHB)</option>
+                    <option value="EXIMBANK">Eximbank (EXIMBANK)</option>
+                    <option value="MARITIME BANK">Maritime Bank (MARITIME BANK)</option>
+                    <option value="VIETCAPITAL BANK">VietCapital Bank (VIETCAPITAL BANK)</option>
+                    <option value="KIENLONG BANK">Kienlongbank (KIENLONG BANK)</option>
+                    <option value="SAIGONBANK">Saigonbank (SAIGONBANK)</option>
+                    <option value="PGBANK">PG Bank (PGBANK)</option>
+                    <option value="ABBANK">ABBank (ABBANK)</option>
+                    <option value="NCB">NCB (NCB)</option>
+                    <option value="SEA BANK">SeaBank (SEA BANK)</option>
+                    <option value="LIENVIETPOSTBANK">LienVietPostBank (LIENVIETPOSTBANK)</option>
+                    <option value="VIETBANK">Vietbank (VIETBANK)</option>
+                    <option value="GPBANK">GPBank (GPBANK)</option>
+                    <option value="PVCOMBANK">PVcomBank (PVCOMBANK)</option>
+                    <option value="COOPBANK">Co-opBank (COOPBANK)</option>
+                  </select>
+
+                  <Input
+                    label="Số tài khoản"
+                    name="vietqr_account_number"
+                    value={vietqrFormData.vietqr_account_number}
+                    onChange={(e) => setVietqrFormData(prev => ({ ...prev, vietqr_account_number: e.target.value }))}
+                    placeholder="Nhập số tài khoản"
+                    required
+                    disabled={vietqrLoading}
+                    autoComplete="off"
+                  />
+
+                  <Input
+                    label="Tên chủ tài khoản"
+                    name="vietqr_account_name"
+                    value={vietqrFormData.vietqr_account_name}
+                    onChange={(e) => setVietqrFormData(prev => ({ ...prev, vietqr_account_name: e.target.value }))}
+                    placeholder="Nhập tên chủ tài khoản"
+                    required
+                    disabled={vietqrLoading}
+                    autoComplete="off"
+                  />
+
+                  {vietqrError && <div className="text-sm text-status-fail">{vietqrError}</div>}
+                  {vietqrSuccess && <div className="text-sm text-status-pass">{vietqrSuccess}</div>}
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="secondary" onClick={closeModals} disabled={vietqrLoading}>Hủy</Button>
+                    <Button type="submit" loading={vietqrLoading}>{vietqrLoading ? 'Đang lưu...' : 'Lưu cấu hình'}</Button>
+                  </div>
+                </>
+              )}
             </form>
           </Card>
         </div>
