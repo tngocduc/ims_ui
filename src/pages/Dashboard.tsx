@@ -20,6 +20,7 @@ function Dashboard() {
   const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
+    console.log('Dashboard useEffect triggered, user:', user)
     fetchStats()
   }, [user?.tenant?.id])
 

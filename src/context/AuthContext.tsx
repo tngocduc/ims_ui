@@ -34,13 +34,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('access_token')
     if (!token) {
+      console.log('No access token in localStorage')
       setLoading(false)
       return
     }
     try {
+      console.log('Fetching user with token...')
       const response = await authApi.me()
+      console.log('User response:', response)
       setUser(response)
-    } catch {
+    } catch (err) {
+      console.error('Failed to fetch user:', err)
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
       setUser(null)
@@ -54,7 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser])
 
   const login = async (username: string, password: string, type: 'tenant' | 'admin' = 'tenant', _rememberMe = false, tenantId?: string) => {
+    console.log('Login called with:', { username, type, tenantId })
     const response = await authApi.login(username, password, tenantId)
+    console.log('Login response:', response)
     const { access, refresh } = response
     localStorage.setItem('access_token', access)
     // Store refresh token regardless - JWT handles auth

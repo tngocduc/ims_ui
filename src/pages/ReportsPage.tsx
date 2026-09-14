@@ -122,6 +122,7 @@ function ReportsPage() {
   }
 
   useEffect(() => {
+    console.log('ReportsPage useEffect triggered, user:', user)
     fetchReport()
   }, [filters.deviceUuid, filters.dateFrom, filters.dateTo, user?.tenant?.id])
 
