@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, NavLink, Outlet } from 'react-router-dom'
-import { ChevronLeft, LayoutDashboard, Users, Server, Activity, BarChart2, LogOut, ChevronRight, CreditCard, FileText } from 'lucide-react'
+import { ChevronLeft, LayoutDashboard, Users, Server, Activity, BarChart2, LogOut, ChevronRight, CreditCard, FileText, Settings } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,7 @@ export function Layout() {
     { path: '/external-devices', label: 'Thiết bị ngoại vi', icon: FileText },
     { path: '/transactions', label: 'Giao dịch', icon: Activity },
     { path: '/reports', label: 'Báo cáo', icon: BarChart2 },
+    { path: '/vietqr-config', label: 'Cấu hình VietQR', icon: Settings },
   ] : []
 
   const handleLogout = async () => {

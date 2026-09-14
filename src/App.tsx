@@ -10,6 +10,7 @@ import TransactionsPage from '@/pages/TransactionsPage'
 import ReportsPage from '@/pages/ReportsPage'
 import RfidCardsPage from '@/pages/RfidCardsPage'
 import ExternalDevicesPage from '@/pages/ExternalDevicesPage'
+import VietqrConfigPage from '@/pages/VietqrConfigPage'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminTenantsPage from '@/pages/admin/AdminTenantsPage'
 import AdminTenantAdminsPage from '@/pages/admin/AdminTenantAdminsPage'
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route path="/external-devices" element={<ExternalDevicesPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/vietqr-config" element={<VietqrConfigPage />} />
       </Route>
 
       {/* Protected admin routes */}

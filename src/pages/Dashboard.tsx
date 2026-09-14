@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
-import { tenantUserApi, deviceApi } from '@/lib/api'
+import { tenantApi, tenantUserApi, deviceApi } from '@/lib/api'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Button } from '@/components/ui/button'
 import { Plus, Server, DollarSign, BarChart2, Activity } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
+import { useAuth } from '@/context/AuthContext'
+import { formatCurrency } from '@/lib/utils'
 
 function Dashboard() {
+  const { user } = useAuth()
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalDevices: 0,
@@ -17,21 +20,32 @@ function Dashboard() {
 
   useEffect(() => {
     fetchStats()
-  }, [])
+  }, [user?.tenant?.id])
 
   const fetchStats = async () => {
+    if (!user?.tenant?.id) {
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
-      const [usersRes, devicesRes] = await Promise.all([
-        tenantUserApi.list({ pageSize: 1 }),
+      const [tenantRes, devicesRes] = await Promise.all([
+        tenantApi.get(user.tenant.id),
         deviceApi.listStatus({ pageSize: 1 }),
       ])
       
+      // Fetch all users to calculate total balance
+      const usersRes = await tenantUserApi.list({ pageSize: 1000 })
+      let totalBalance = 0
+      if (usersRes.items) {
+        totalBalance = usersRes.items.reduce((sum: number, u: { balance: string }) => sum + parseFloat(u.balance || '0'), 0)
+      }
+
       setStats({
-        totalUsers: usersRes.count || 0,
-        totalDevices: devicesRes.count || 0,
+        totalUsers: tenantRes.user_count || 0,
+        totalDevices: tenantRes.device_count || 0,
         onlineDevices: devicesRes.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
-        totalBalance: 0,
+        totalBalance,
       })
     } catch (err) {
       console.error(err)
@@ -62,7 +76,7 @@ function Dashboard() {
         <MetricCard value={stats.totalUsers} label="Tổng người dùng" />
         <MetricCard value={stats.totalDevices} label="Tổng thiết bị" />
         <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" />
-        <MetricCard value={stats.totalBalance} label="Tổng số dư" />
+        <MetricCard value={formatCurrency(stats.totalBalance)} label="Tổng số dư" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

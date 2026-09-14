@@ -390,6 +390,13 @@ export const mqttApi = {
     api.post('/mqtt/device-status', data).then(extractData),
 }
 
+export const vietqrApi = {
+  getConfig: () =>
+    api.get('/core/tenant/vietqr-config').then(extractData),
+  updateConfig: (data: { vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string }) =>
+    api.put('/core/tenant/vietqr-config', data).then(extractData),
+}
+
 export const webhookApi = {
   qrPayment: (data: Record<string, unknown>, webhookKey: string, signature: string) =>
     api.post('/webhook/qr-payment', data, {

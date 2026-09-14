@@ -8,6 +8,7 @@ import { CodeBlock } from '@/components/ui/code-block'
 import { MetricCard } from '@/components/ui/metric-card'
 import { FileText, Server } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
 
 interface ReportItem {
   device_uuid: string
@@ -30,6 +31,7 @@ interface ReportResponse {
 }
 
 function ReportsPage() {
+  const { user } = useAuth()
   const [reportData, setReportData] = useState<ReportItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -46,6 +48,10 @@ function ReportsPage() {
   })
 
   const fetchReport = async () => {
+    if (!user?.tenant?.id) {
+      setError('Không xác định được tenant')
+      return
+    }
     try {
       setLoading(true)
       setError('')
@@ -111,7 +117,7 @@ function ReportsPage() {
 
   useEffect(() => {
     fetchReport()
-  }, [filters.deviceUuid, filters.dateFrom, filters.dateTo])
+  }, [filters.deviceUuid, filters.dateFrom, filters.dateTo, user?.tenant?.id])
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
