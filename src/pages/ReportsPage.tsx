@@ -65,7 +65,7 @@ function ReportsPage() {
       
       const response = await reportApi.sales(params)
       console.log('reportApi.sales response:', response)
-      setDebugInfo(`Response: ${JSON.stringify(response)}`)
+      setDebugInfo(`Response: ${JSON.stringify(response, null, 2)}`)
       const data = response as ReportResponse
       
       // Transform the response to match the expected format
@@ -114,7 +114,8 @@ function ReportsPage() {
       setSummary({ totalSales, totalTransactions, byPaymentMethod, byDevice })
     } catch (err) {
       setError('Không thể tải báo cáo doanh thu')
-      console.error(err)
+      console.error('Reports fetchReport error:', err)
+      setDebugInfo(`Error: ${err?.response?.data?.message || err?.message || err}`)
     } finally {
       setLoading(false)
     }

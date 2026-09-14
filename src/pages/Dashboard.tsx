@@ -40,11 +40,12 @@ function Dashboard() {
       
       console.log('usersRes:', usersRes)
       console.log('devicesRes:', devicesRes)
-      setDebugInfo(`usersRes: ${JSON.stringify(usersRes)}, devicesRes: ${JSON.stringify(devicesRes)}`)
+      setDebugInfo(`usersRes: ${JSON.stringify(usersRes, null, 2)} | devicesRes: ${JSON.stringify(devicesRes, null, 2)}`)
       
       // Fetch all users to calculate total balance
       const allUsersRes = await tenantUserApi.list({ pageSize: 1000 })
       console.log('allUsersRes:', allUsersRes)
+      setDebugInfo(prev => prev + ` | allUsersRes: ${JSON.stringify(allUsersRes, null, 2)}`)
       let totalBalance = 0
       if (allUsersRes?.items) {
         totalBalance = allUsersRes.items.reduce((sum: number, u: { balance: string }) => sum + parseFloat(u.balance || '0'), 0)
@@ -58,7 +59,7 @@ function Dashboard() {
       })
     } catch (err) {
       console.error('Dashboard fetchStats error:', err)
-      setDebugInfo(`Error: ${err}`)
+      setDebugInfo(`Error: ${err?.response?.data?.message || err?.message || err}`)
     } finally {
       setLoading(false)
     }
