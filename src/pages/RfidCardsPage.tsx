@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Plus, Search, Edit, Trash2, CreditCard } from 'lucide-react'
+import { Plus, Search, Trash2, CreditCard } from 'lucide-react'
 
 interface RfidCard {
   id: number
@@ -260,7 +260,7 @@ function RfidCardsPage() {
                           <td className="px-4 py-3"><CodeBlock code={String(card.id)} lang="text" className="inline" /></td>
                           <td className="px-4 py-3 font-medium text-text-primary"><CodeBlock code={card.card_id} lang="text" className="inline" /></td>
                           <td className="px-4 py-3 text-text-muted">
-                            {card.extra_info?.label || card.extra_info?.name || '—'}
+                            {String(card.extra_info?.label || card.extra_info?.name || '—')}
                           </td>
                           <td className="px-4 py-3">
                             <StatusBadge status={card.is_active ? 'pass' : 'fail'} />

@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react'
 import { tenantApi, Tenant } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Plus, Search, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Search, Edit, CheckCircle, XCircle } from 'lucide-react'
 
 interface TenantResponse {
   items: Tenant[]

@@ -16,7 +16,8 @@ interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (username: string, password: string, type?: 'tenant' | 'admin', rememberMe?: boolean) => Promise<void>
+  loginType: 'tenant' | 'admin' | null
+  login: (username: string, password: string, type?: 'tenant' | 'admin', rememberMe?: boolean, tenantId?: string) => Promise<void>
   logout: () => Promise<void>
   isAuthenticated: boolean
   isAdmin: boolean
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loginType, setLoginType] = useState<'tenant' | 'admin' | null>(null)
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('access_token')
@@ -51,12 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser()
   }, [fetchUser])
 
-  const login = async (username: string, password: string, type: 'tenant' | 'admin' = 'tenant', rememberMe = false) => {
-    const response = await authApi.login(username, password)
+  const login = async (username: string, password: string, type: 'tenant' | 'admin' = 'tenant', _rememberMe = false, tenantId?: string) => {
+    const response = await authApi.login(username, password, tenantId)
     const { access, refresh } = response
     localStorage.setItem('access_token', access)
     // Store refresh token regardless - JWT handles auth
     localStorage.setItem('refresh_token', refresh)
+    setLoginType(type)
     await fetchUser()
   }
 
@@ -69,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     setUser(null)
+    setLoginType(null)
   }
 
   const isAdmin = user?.is_staff || user?.is_superuser || user?.role === 'admin'
@@ -77,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextType = {
     user,
     loading,
+    loginType,
     login,
     logout,
     isAuthenticated: !!user,

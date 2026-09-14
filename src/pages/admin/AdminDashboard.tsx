@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { tenantApi, tenantUserApi, deviceApi, externalDeviceApi } from '@/lib/api'
+import { tenantApi, deviceApi, externalDeviceApi } from '@/lib/api'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Button } from '@/components/ui/button'
-import { Plus, Server, BarChart2, ShieldCheck, FileText, CreditCard } from 'lucide-react'
+import { Plus, Server, BarChart2, ShieldCheck, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
 

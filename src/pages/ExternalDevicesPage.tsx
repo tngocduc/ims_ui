@@ -138,10 +138,6 @@ function ExternalDevicesPage() {
     setTxPagination(prev => ({ ...prev, pageIndex }))
   }
 
-  const handleTxPageSizeChange = (pageSize: number) => {
-    setTxPagination(prev => ({ ...prev, pageSize, pageIndex: 1 }))
-  }
-
   const handleViewTransactions = (device: ExternalDevice) => {
     setSelectedDevice(device)
     setShowTransactions(true)

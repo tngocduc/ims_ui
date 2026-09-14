@@ -10,6 +10,7 @@ function LoginPage() {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
+    tenant_id: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,7 +28,7 @@ function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      await login(formData.username, formData.password, 'tenant', rememberMe)
+      await login(formData.username, formData.password, 'tenant', rememberMe, formData.tenant_id)
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } }
       setError(axiosError.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.')
@@ -49,6 +50,17 @@ function LoginPage() {
           </CardHeader>
           <CardContent className="pt-0">
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              <Input
+                label="Tenant ID"
+                name="tenant_id"
+                type="number"
+                value={formData.tenant_id}
+                onChange={handleChange}
+                placeholder="Nhập Tenant ID"
+                required
+                disabled={loading}
+                autoComplete="off"
+              />
               <Input
                 label="Tên đăng nhập"
                 name="username"

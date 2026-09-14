@@ -28,7 +28,6 @@ export function CodeBlock({ code, lang = 'json', className, showLineNumbers = fa
         setHtml(highlighter.codeToHtml(code, { 
           lang, 
           theme: 'github-dark', 
-          lineNumbers: showLineNumbers,
           defaultColor: false,
         }))
       }
