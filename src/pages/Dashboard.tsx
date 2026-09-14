@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { tenantApi, tenantUserApi, deviceApi } from '@/lib/api'
+import { tenantUserApi, deviceApi } from '@/lib/api'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Button } from '@/components/ui/button'
 import { Plus, Server, DollarSign, BarChart2, Activity } from 'lucide-react'
@@ -17,6 +17,7 @@ function Dashboard() {
     totalBalance: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
     fetchStats()
@@ -24,31 +25,40 @@ function Dashboard() {
 
   const fetchStats = async () => {
     if (!user?.tenant?.id) {
+      setDebugInfo('No tenant ID in user: ' + JSON.stringify(user?.tenant))
       setLoading(false)
       return
     }
     try {
       setLoading(true)
-      const [tenantRes, devicesRes] = await Promise.all([
-        tenantApi.get(user.tenant.id),
+      setDebugInfo(`Fetching for tenant ID: ${user.tenant.id}`)
+      // Use tenant-scoped endpoints (auto-scoped via JWT)
+      const [usersRes, devicesRes] = await Promise.all([
+        tenantUserApi.list({ pageSize: 1 }),
         deviceApi.listStatus({ pageSize: 1 }),
       ])
       
+      console.log('usersRes:', usersRes)
+      console.log('devicesRes:', devicesRes)
+      setDebugInfo(`usersRes: ${JSON.stringify(usersRes)}, devicesRes: ${JSON.stringify(devicesRes)}`)
+      
       // Fetch all users to calculate total balance
-      const usersRes = await tenantUserApi.list({ pageSize: 1000 })
+      const allUsersRes = await tenantUserApi.list({ pageSize: 1000 })
+      console.log('allUsersRes:', allUsersRes)
       let totalBalance = 0
-      if (usersRes.items) {
-        totalBalance = usersRes.items.reduce((sum: number, u: { balance: string }) => sum + parseFloat(u.balance || '0'), 0)
+      if (allUsersRes?.items) {
+        totalBalance = allUsersRes.items.reduce((sum: number, u: { balance: string }) => sum + parseFloat(u.balance || '0'), 0)
       }
 
       setStats({
-        totalUsers: tenantRes.user_count || 0,
-        totalDevices: tenantRes.device_count || 0,
-        onlineDevices: devicesRes.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
+        totalUsers: usersRes?.count || 0,
+        totalDevices: devicesRes?.count || 0,
+        onlineDevices: devicesRes?.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
         totalBalance,
       })
     } catch (err) {
-      console.error(err)
+      console.error('Dashboard fetchStats error:', err)
+      setDebugInfo(`Error: ${err}`)
     } finally {
       setLoading(false)
     }
@@ -70,6 +80,12 @@ function Dashboard() {
           <p className="text-sm text-text-muted mt-1">Tổng quan tenant và thao tác nhanh</p>
         </div>
       </div>
+
+      {debugInfo && (
+        <div className="p-3 text-xs font-mono bg-bg-base border border-border-subtle rounded-[4px] text-text-muted">
+          Debug: {debugInfo}
+        </div>
+      )}
 
       <SectionLabel>thống kê</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
