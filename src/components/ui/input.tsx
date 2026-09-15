@@ -2,13 +2,13 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string
+  label?: React.ReactNode
   error?: string
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = 'text', label, error, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-')
+    const inputId = id || (typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : 'input')
     
     return (
       <div className="w-full">

@@ -36,8 +36,10 @@ function VietqrConfigPage() {
       const response = await vietqrApi.getConfig()
       setConfig(response)
       if (response.has_vietqr_config) {
+        // Normalize bank value to match options (case-insensitive)
+        const bankValue = response.vietqr_bank?.toUpperCase() || ''
         setFormData({
-          vietqr_bank: response.vietqr_bank,
+          vietqr_bank: bankValue,
           vietqr_account_number: response.vietqr_account_number,
           vietqr_account_name: response.vietqr_account_name,
         })
