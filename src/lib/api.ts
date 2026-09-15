@@ -424,12 +424,12 @@ export const mqttApi = {
 export const vietqrApi = {
   getConfig: () =>
     api.get('/core/tenant/vietqr-config').then(extractData),
-  updateConfig: (data: { vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string }) =>
+  updateConfig: (data: { vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string; seapay_api_key: string }) =>
     api.put('/core/tenant/vietqr-config', data).then(extractData),
   // Admin endpoints
   adminGetConfig: (tenantId: number) =>
     api.get(`/core/tenants/${tenantId}/vietqr-config`).then(extractData),
-  adminUpdateConfig: (tenantId: number, data: { vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string }) =>
+  adminUpdateConfig: (tenantId: number, data: { vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string; seapay_api_key: string }) =>
     api.put(`/core/tenants/${tenantId}/vietqr-config`, data).then(extractData),
 }
 

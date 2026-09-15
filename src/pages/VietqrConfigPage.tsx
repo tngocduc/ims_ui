@@ -11,6 +11,7 @@ interface VietqrConfig {
   vietqr_bank: string
   vietqr_account_number: string
   vietqr_account_name: string
+  seapay_api_key: string
   has_vietqr_config: boolean
 }
 
@@ -24,6 +25,7 @@ function VietqrConfigPage() {
     vietqr_bank: '',
     vietqr_account_number: '',
     vietqr_account_name: '',
+    seapay_api_key: '',
   })
 
   useEffect(() => {
@@ -34,16 +36,22 @@ function VietqrConfigPage() {
     try {
       setLoading(true)
       const response = await vietqrApi.getConfig()
-      console.log('VietQR config response:', response)
+      console.log('VietQR config raw response:', response)
+      console.log('VietQR config has_vietqr_config:', response?.has_vietqr_config)
+      console.log('VietQR config bank:', response?.vietqr_bank)
+      console.log('VietQR config account_number:', response?.vietqr_account_number)
+      console.log('VietQR config account_name:', response?.vietqr_account_name)
       setConfig(response)
-      if (response.has_vietqr_config) {
+      if (response?.has_vietqr_config) {
         // Normalize bank value to match options (case-insensitive)
         const bankValue = response.vietqr_bank?.toUpperCase().trim() || ''
         console.log('Bank value from API:', response.vietqr_bank, '-> normalized:', bankValue)
+        console.log('Available bank options:', banks.map(b => b.value))
         setFormData({
           vietqr_bank: bankValue,
           vietqr_account_number: response.vietqr_account_number,
           vietqr_account_name: response.vietqr_account_name,
+          seapay_api_key: response.seapay_api_key || '',
         })
       }
     } catch (err: unknown) {
@@ -53,6 +61,10 @@ function VietqrConfigPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    console.log('formData changed:', formData)
+  }, [formData])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -155,6 +167,14 @@ function VietqrConfigPage() {
         </div>
       )}
 
+      {/* Debug Panel */}
+      <div className="p-3 text-xs font-mono bg-bg-base border border-border-subtle rounded-[4px] text-text-muted max-h-60 overflow-auto">
+        <div><strong>Config:</strong> {JSON.stringify(config, null, 2)}</div>
+        <div><strong>FormData:</strong> {JSON.stringify(formData, null, 2)}</div>
+        <div><strong>Loading:</strong> {loading.toString()}</div>
+        <div><strong>has_vietqr_config:</strong> {config?.has_vietqr_config?.toString()}</div>
+      </div>
+
       <SectionLabel>thông tin tài khoản ngân hàng</SectionLabel>
       <Card>
         <CardHeader>
@@ -199,6 +219,18 @@ function VietqrConfigPage() {
               required
               disabled={saving}
               autoComplete="off"
+            />
+
+            <Input
+              label={<>SeaPay API Key <span className='text-status-fail'>*</span></>}
+              name="seapay_api_key"
+              value={formData.seapay_api_key}
+              onChange={handleChange}
+              placeholder="Nhập SeaPay API Key"
+              required
+              disabled={saving}
+              autoComplete="off"
+              type="password"
             />
 
             <Button type="submit" className="w-full" loading={saving}>
