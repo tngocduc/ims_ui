@@ -234,8 +234,8 @@ export interface SalesReport {
 export const authApi = {
   login: (username: string, password: string, tenantId?: string) =>
     api.post<{ status: string; data: { access: string; refresh: string } }>('/auth/token/pair', { username, password, tenant_id: tenantId }).then(extractData),
-  sessionLogin: (username: string, password: string) =>
-    api.post<{ status: string; data: User }>('/auth/login', { username, password }).then(extractData),
+  sessionLogin: (username: string, password: string, tenantId?: string) =>
+    api.post<{ status: string; data: User }>('/auth/login', { username, password, tenant_id: tenantId }).then(extractData),
   logout: () => api.post<{ status: string; data: unknown }>('/auth/logout').then(extractData),
   me: () => api.get<{ status: string; data: User }>('/auth/me').then(extractData),
   verifyToken: (token: string) =>

@@ -5,18 +5,31 @@ import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Search, FileText } from 'lucide-react'
+import { Server } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { deviceApi } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
+
+interface Device {
+  uuid: string
+  type_name: string
+  status: string
+}
 
 interface Transaction {
   id: number
   tx_number: string
   device_uuid: string
+  user_id: number | null
   user_info: { name: string } | null
   payment_method: string
+  payment_source_id: string
   price: string
   item: string
+  reason: string
   is_success: boolean
+  is_sniff: boolean
+  note: string | null
   time: string
 }
 
@@ -30,24 +43,59 @@ const paymentMethodLabels: Record<string, string> = {
 }
 
 function TransactionsPage() {
+  const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
+  const [devicesLoading, setDevicesLoading] = useState(true)
   const [error, setError] = useState('')
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 })
   const [filters, setFilters] = useState({
-    search: '',
+    deviceUuid: '',
     paymentMethod: '',
     dateFrom: '',
     dateTo: '',
   })
 
+  const fetchDevices = async () => {
+    if (!user?.tenant?.id) return
+    try {
+      setDevicesLoading(true)
+      const response = await deviceApi.list({ tenant_id: user.tenant.id, is_active: true })
+      const data = response as { items: Device[] }
+      setDevices(data.items || [])
+    } catch (err) {
+      console.error('Failed to fetch devices:', err)
+    } finally {
+      setDevicesLoading(false)
+    }
+  }
+
   const fetchTransactions = async () => {
+    if (!filters.deviceUuid) {
+      setTransactions([])
+      setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
+      return
+    }
     try {
       setLoading(true)
       setError('')
-      // Transaction API doesn't have list endpoint, using mock data for now
-      setTransactions([])
-      setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
+      const params: Record<string, unknown> = {
+        pageIndex: pagination.page,
+        pageSize: pagination.limit,
+      }
+      if (filters.paymentMethod) params.payment_method = filters.paymentMethod
+      if (filters.dateFrom) params.date_from = filters.dateFrom
+      if (filters.dateTo) params.date_to = filters.dateTo
+
+      const response = await deviceApi.listTransactions(filters.deviceUuid, params)
+      const data = response as { items: Transaction[]; count: number; pageIndex: number; pageSize: number; totalPages: number }
+      setTransactions(data.items || [])
+      setPagination(prev => ({
+        ...prev,
+        total: data.count,
+        totalPages: data.totalPages,
+      }))
     } catch (err) {
       setError('Không thể tải giao dịch')
       console.error(err)
@@ -57,8 +105,12 @@ function TransactionsPage() {
   }
 
   useEffect(() => {
+    fetchDevices()
+  }, [user?.tenant?.id])
+
+  useEffect(() => {
     fetchTransactions()
-  }, [pagination.page, pagination.limit])
+  }, [pagination.page, pagination.limit, filters.deviceUuid, filters.paymentMethod, filters.dateFrom, filters.dateTo])
 
   const handlePageChange = (page: number) => {
     setPagination(prev => ({ ...prev, page }))
@@ -66,6 +118,11 @@ function TransactionsPage() {
 
   const handlePageSizeChange = (limit: number) => {
     setPagination(prev => ({ ...prev, limit, page: 1 }))
+  }
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    setPagination(prev => ({ ...prev, page: 1 }))
   }
 
   return (
@@ -79,20 +136,22 @@ function TransactionsPage() {
 
       <Card>
         <CardContent className="pt-4">
-          <form className="flex flex-wrap items-center gap-4" role="search">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-              <Input
-                placeholder="Tìm theo số TX, thiết bị, hoặc người dùng..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="pl-10"
-                autoComplete="off"
+          <form className="flex flex-wrap items-end gap-4" role="search">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs font-medium text-text-muted mb-1.5">Thiết bị</label>
+              <Select
+                value={filters.deviceUuid}
+                onChange={(e) => handleFilterChange('deviceUuid', e.target.value)}
+                options={[
+                  { value: '', label: 'Chọn thiết bị' },
+                  ...devices.map(d => ({ value: d.uuid, label: `${d.uuid} (${d.type_name})` })),
+                ]}
+                disabled={devicesLoading}
               />
             </div>
             <Select
               value={filters.paymentMethod}
-              onChange={(e) => setFilters({ ...filters, paymentMethod: e.target.value })}
+              onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
               options={[
                 { value: '', label: 'Tất cả phương thức' },
                 { value: 'cash', label: 'Tiền mặt' },
@@ -103,18 +162,22 @@ function TransactionsPage() {
                 { value: 'other', label: 'Khác' },
               ]}
             />
-            <Input
-              type="date"
-              placeholder="Từ"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-            />
-            <Input
-              type="date"
-              placeholder="Đến"
-              value={filters.dateTo}
-              onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-            />
+            <div className="min-w-[160px]">
+              <label className="block text-xs font-medium text-text-muted mb-1.5">Từ ngày</label>
+              <Input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+              />
+            </div>
+            <div className="min-w-[160px]">
+              <label className="block text-xs font-medium text-text-muted mb-1.5">Đến ngày</label>
+              <Input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+              />
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -151,7 +214,7 @@ function TransactionsPage() {
                     {transactions.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="px-4 py-12 text-center text-text-muted">
-                          <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                          <Server className="h-10 w-10 mx-auto mb-3 opacity-30" />
                           <p>Không tìm thấy giao dịch</p>
                         </td>
                       </tr>
