@@ -47,13 +47,15 @@ api.interceptors.response.use(
   }
 )
 
-function extractData<T>(response: AxiosResponse<{ status: string; data: T } | T>): T {
-  const data = response.data as { status?: string; data?: T } & T
+function extractData<T>(response: { status?: string; data?: T } | AxiosResponse<{ status: string; data: T } | T>): T {
+  // Handle both AxiosResponse and direct data (from interceptor)
+  const data = 'data' in response && response.data !== undefined ? response.data : response;
+  const result = data as { status?: string; data?: T } & T;
   // Handle both formats: {status: "success", data: T} and direct T
-  if (data && typeof data === 'object' && 'status' in data && 'data' in data) {
-    return data.data as T
+  if (result && typeof result === 'object' && 'status' in result && 'data' in result) {
+    return result.data as T;
   }
-  return data as T
+  return result as T;
 }
 
 function mapPaginationParams(params?: Record<string, unknown>): Record<string, unknown> {
