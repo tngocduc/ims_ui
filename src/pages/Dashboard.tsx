@@ -9,12 +9,24 @@ import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/utils'
 
 interface SalesReport {
+  total_devices: number
   total_sales: string
   transaction_count: number
+  failed_transaction_count: number
   external_total_sales: string
   external_transaction_count: number
   by_device: Array<{ device_uuid: string; total_sales: string; transaction_count: number }>
+  by_external_device: Array<{ device_sn: string; total_sales: string; transaction_count: number }>
   by_payment_method: Array<{ payment_method: string; total_sales: string; transaction_count: number }>
+  by_external_payment_method: Array<{ pay_method: string; total_sales: string; transaction_count: number }>
+}
+
+interface PaginatedResponse<T> {
+  items: T[]
+  count: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
 }
 
 function Dashboard() {
@@ -26,6 +38,8 @@ function Dashboard() {
     totalBalance: 0,
     totalSales: 0,
     totalTransactions: 0,
+    successTransactions: 0,
+    failedTransactions: 0,
     todaySales: 0,
     todayTransactions: 0,
   })
@@ -37,6 +51,44 @@ function Dashboard() {
     console.log('Dashboard useEffect triggered, user:', user)
     fetchStats()
   }, [user?.tenant?.id])
+
+  // Fetch all users across all pages (pageSize max is 100)
+  const fetchAllUsers = async (): Promise<Array<{ balance: string }>> => {
+    if (!user?.tenant?.id) return []
+    const allUsers: Array<{ balance: string }> = []
+    let pageIndex = 1
+    const pageSize = 100
+
+    while (true) {
+      const response = await tenantUserApi.list({ pageIndex, pageSize })
+      const data = response as PaginatedResponse<{ balance: string }>
+      if (data.items?.length) {
+        allUsers.push(...data.items)
+      }
+      if (pageIndex >= (data.totalPages || 1)) break
+      pageIndex++
+    }
+    return allUsers
+  }
+
+  // Fetch all device statuses across all pages (pageSize max is 100)
+  const fetchAllDeviceStatuses = async (): Promise<Array<{ status: string }>> => {
+    if (!user?.tenant?.id) return []
+    const allDevices: Array<{ status: string }> = []
+    let pageIndex = 1
+    const pageSize = 100
+
+    while (true) {
+      const response = await deviceApi.listStatus({ pageIndex, pageSize })
+      const data = response as PaginatedResponse<{ status: string }>
+      if (data.items?.length) {
+        allDevices.push(...data.items)
+      }
+      if (pageIndex >= (data.totalPages || 1)) break
+      pageIndex++
+    }
+    return allDevices
+  }
 
   const fetchStats = async () => {
     if (!user?.tenant?.id) {
@@ -59,18 +111,22 @@ function Dashboard() {
       console.log('salesRes:', salesRes)
       setDebugInfo(`usersRes: ${JSON.stringify(usersRes, null, 2)} | devicesRes: ${JSON.stringify(devicesRes, null, 2)} | salesRes: ${JSON.stringify(salesRes, null, 2)}`)
       
-      // Fetch all users to calculate total balance
-      const allUsersRes = await tenantUserApi.list({ pageSize: 1000 })
-      console.log('allUsersRes:', allUsersRes)
-      setDebugInfo(prev => prev + ` | allUsersRes: ${JSON.stringify(allUsersRes, null, 2)}`)
-      let totalBalance = 0
-      if (allUsersRes?.items) {
-        totalBalance = allUsersRes.items.reduce((sum: number, u: { balance: string }) => sum + parseFloat(u.balance || '0'), 0)
-      }
+      // Fetch all users to calculate total balance (paginated)
+      const allUsers = await fetchAllUsers()
+      console.log('allUsers count:', allUsers.length)
+      setDebugInfo(prev => prev + ` | allUsers count: ${allUsers.length}`)
+      const totalBalance = allUsers.reduce((sum, u) => sum + parseFloat(u.balance || '0'), 0)
 
       const salesData = salesRes as SalesReport
       const totalSales = parseFloat(salesData.total_sales || '0') + parseFloat(salesData.external_total_sales || '0')
       const totalTransactions = salesData.transaction_count + salesData.external_transaction_count
+      // API now provides transaction_count (successful) and failed_transaction_count
+      const successTransactions = salesData.transaction_count
+      const failedTransactions = salesData.failed_transaction_count || 0
+
+      // Fetch all device statuses to count online devices
+      const allDeviceStatuses = await fetchAllDeviceStatuses()
+      const onlineDevices = allDeviceStatuses.filter(d => d.status === 'online').length
 
       // Sort top devices by sales
       const sortedDevices = [...(salesData.by_device || [])].sort((a, b) => 
@@ -80,10 +136,12 @@ function Dashboard() {
       setStats({
         totalUsers: usersRes?.count || 0,
         totalDevices: devicesRes?.count || 0,
-        onlineDevices: devicesRes?.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
+        onlineDevices,
         totalBalance,
         totalSales,
         totalTransactions,
+        successTransactions,
+        failedTransactions,
         todaySales: totalSales, // API doesn't provide today-specific, use total as placeholder
         todayTransactions: totalTransactions,
       })
@@ -126,9 +184,9 @@ function Dashboard() {
         <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" icon={<Wifi className="h-5 w-5" />} />
         <MetricCard value={formatCurrency(stats.totalBalance)} label="Tổng số dư" icon={<Wallet className="h-5 w-5" />} />
         <MetricCard value={formatCurrency(stats.totalSales)} label="Tổng doanh thu" icon={<DollarSign className="h-5 w-5" />} />
+        <MetricCard value={stats.successTransactions.toLocaleString()} label="Giao dịch thành công" icon={<Activity className="h-5 w-5" />} />
+        <MetricCard value={stats.failedTransactions.toLocaleString()} label="Giao dịch thất bại" icon={<Activity className="h-5 w-5" />} />
         <MetricCard value={stats.totalTransactions.toLocaleString()} label="Tổng giao dịch" icon={<Activity className="h-5 w-5" />} />
-        <MetricCard value={formatCurrency(stats.todaySales)} label="Doanh thu hôm nay" icon={<TrendingUp className="h-5 w-5" />} />
-        <MetricCard value={stats.todayTransactions.toLocaleString()} label="Giao dịch hôm nay" icon={<Activity className="h-5 w-5" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

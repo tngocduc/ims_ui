@@ -7,6 +7,14 @@ import { Plus, Server, BarChart2, ShieldCheck, FileText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
 
+interface PaginatedResponse<T> {
+  items: T[]
+  count: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
 function AdminDashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState({
@@ -22,6 +30,24 @@ function AdminDashboard() {
     fetchStats()
   }, [])
 
+  // Fetch all device statuses across all pages (pageSize max is 100)
+  const fetchAllDeviceStatuses = async (): Promise<Array<{ status: string }>> => {
+    const allDevices: Array<{ status: string }> = []
+    let pageIndex = 1
+    const pageSize = 100
+
+    while (true) {
+      const response = await deviceApi.listStatus({ pageIndex, pageSize })
+      const data = response as PaginatedResponse<{ status: string }>
+      if (data.items?.length) {
+        allDevices.push(...data.items)
+      }
+      if (pageIndex >= (data.totalPages || 1)) break
+      pageIndex++
+    }
+    return allDevices
+  }
+
   const fetchStats = async () => {
     try {
       setLoading(true)
@@ -32,11 +58,15 @@ function AdminDashboard() {
         externalDeviceApi.list({ pageSize: 1 }),
       ])
       
+      // Fetch all device statuses to count online devices
+      const allDeviceStatuses = await fetchAllDeviceStatuses()
+      const onlineDevices = allDeviceStatuses.filter(d => d.status === 'online').length
+
       setStats({
         totalTenants: tenantsRes.count || 0,
         totalTenantAdmins: adminsRes.count || 0,
         totalDevices: devicesRes.count || 0,
-        onlineDevices: devicesRes.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
+        onlineDevices,
         totalExternalDevices: externalDevicesRes.count || 0,
       })
     } catch (err) {

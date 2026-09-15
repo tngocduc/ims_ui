@@ -19,9 +19,10 @@ interface ReportItem {
 }
 
 interface ReportResponse {
-  tenant_id: number
+  total_devices: number
   total_sales: string
   transaction_count: number
+  failed_transaction_count: number
   external_total_sales: string
   external_transaction_count: number
   by_device: Array<{ device_uuid: string; total_sales: string; transaction_count: number }>
@@ -43,6 +44,8 @@ function ReportsPage() {
   const [summary, setSummary] = useState({
     totalSales: 0,
     totalTransactions: 0,
+    successTransactions: 0,
+    failedTransactions: 0,
     byPaymentMethod: {} as Record<string, number>,
     byDevice: {} as Record<string, number>,
   })
@@ -90,28 +93,31 @@ function ReportsPage() {
         })),
       ]
       
-      setReportData(items)
-      
-      const totalSales = parseFloat(data.total_sales || '0') + parseFloat(data.external_total_sales || '0')
-      const totalTransactions = data.transaction_count + data.external_transaction_count
-      
-      const byPaymentMethod: Record<string, number> = {}
-      const byDevice: Record<string, number> = {}
-      
-      data.by_payment_method.forEach(item => {
-        byPaymentMethod[item.payment_method] = parseFloat(item.total_sales || '0')
-      })
-      data.by_external_payment_method.forEach(item => {
-        byPaymentMethod[item.pay_method] = (byPaymentMethod[item.pay_method] || 0) + parseFloat(item.total_sales || '0')
-      })
-      data.by_device.forEach(item => {
-        byDevice[item.device_uuid] = parseFloat(item.total_sales || '0')
-      })
-      data.by_external_device.forEach(item => {
-        byDevice[item.device_sn] = (byDevice[item.device_sn] || 0) + parseFloat(item.total_sales || '0')
-      })
-      
-      setSummary({ totalSales, totalTransactions, byPaymentMethod, byDevice })
+setReportData(items)
+       
+       const totalSales = parseFloat(data.total_sales || '0') + parseFloat(data.external_total_sales || '0')
+       const totalTransactions = data.transaction_count + data.external_transaction_count
+       // API now provides transaction_count (successful) and failed_transaction_count
+       const successTransactions = data.transaction_count
+       const failedTransactions = data.failed_transaction_count || 0
+       
+       const byPaymentMethod: Record<string, number> = {}
+       const byDevice: Record<string, number> = {}
+       
+       data.by_payment_method.forEach(item => {
+         byPaymentMethod[item.payment_method] = parseFloat(item.total_sales || '0')
+       })
+       data.by_external_payment_method.forEach(item => {
+         byPaymentMethod[item.pay_method] = (byPaymentMethod[item.pay_method] || 0) + parseFloat(item.total_sales || '0')
+       })
+       data.by_device.forEach(item => {
+         byDevice[item.device_uuid] = parseFloat(item.total_sales || '0')
+       })
+       data.by_external_device.forEach(item => {
+         byDevice[item.device_sn] = (byDevice[item.device_sn] || 0) + parseFloat(item.total_sales || '0')
+       })
+       
+       setSummary({ totalSales, totalTransactions, successTransactions, failedTransactions, byPaymentMethod, byDevice })
     } catch (err) {
       setError('Không thể tải báo cáo doanh thu')
       console.error('Reports fetchReport error:', err)
@@ -148,9 +154,9 @@ function ReportsPage() {
       <SectionLabel>tóm tắt</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard value={formatCurrency(summary.totalSales)} label="Tổng doanh thu" />
+        <MetricCard value={summary.successTransactions.toLocaleString()} label="Giao dịch thành công" />
+        <MetricCard value={summary.failedTransactions.toLocaleString()} label="Giao dịch thất bại" />
         <MetricCard value={summary.totalTransactions.toLocaleString()} label="Tổng giao dịch" />
-        <MetricCard value={Object.keys(summary.byPaymentMethod).length} label="Phương thức thanh toán" />
-        <MetricCard value={Object.keys(summary.byDevice).length} label="Thiết bị hoạt động" />
       </div>
 
       <Card>

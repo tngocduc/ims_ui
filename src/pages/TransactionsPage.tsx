@@ -5,7 +5,6 @@ import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, SectionLabel } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { MetricCard } from '@/components/ui/metric-card'
 import { Server, CreditCard, QrCode } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { deviceApi, qrPaymentApi, QrPayment } from '@/lib/api'
@@ -72,14 +71,6 @@ function TransactionsPage() {
     search: '',
   })
 
-  // Summary state
-  const [summary, setSummary] = useState({
-    totalTransactions: 0,
-    totalAmount: 0,
-    successCount: 0,
-    failedCount: 0,
-  })
-
   const fetchDevices = async () => {
     if (!user?.tenant?.id) return
     try {
@@ -98,7 +89,6 @@ function TransactionsPage() {
     if (!user?.tenant?.id) {
       setTransactions([])
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
-      setSummary({ totalTransactions: 0, totalAmount: 0, successCount: 0, failedCount: 0 })
       return
     }
     try {
@@ -108,15 +98,19 @@ function TransactionsPage() {
       const deviceUuids = filters.deviceUuid ? [filters.deviceUuid] : devices.map(d => d.uuid)
 
       if (deviceUuids.length === 0) {
+        // No devices available yet, don't show empty - just return
+        // The effect will re-run when devices are loaded
         setTransactions([])
         setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
-        setSummary({ totalTransactions: 0, totalAmount: 0, successCount: 0, failedCount: 0 })
         return
       }
 
+      // API max pageSize is 100
+      const apiPageSize = Math.min(pagination.limit * deviceUuids.length, 100)
+      
       const params: Record<string, unknown> = {
         pageIndex: 1,
-        pageSize: pagination.limit * deviceUuids.length,
+        pageSize: apiPageSize,
       }
       if (filters.paymentMethod) params.payment_method = filters.paymentMethod
       if (filters.dateFrom) params.date_from = filters.dateFrom
@@ -125,18 +119,13 @@ function TransactionsPage() {
       const responses = await Promise.all(
         deviceUuids.map(uuid => deviceApi.listTransactions(uuid, params).catch(err => {
           console.error(`Failed to fetch transactions for device ${uuid}:`, err)
-          return { items: [], count: 0, pageIndex: 1, pageSize: params.pageSize, totalPages: 0 }
+          return { items: [], count: 0, pageIndex: 1, pageSize: apiPageSize, totalPages: 0 }
         }))
       )
 
       // Merge all transactions
       const allTransactions = responses.flatMap(r => (r as any).items || [])
       
-      // Calculate summary from all transactions
-      const totalAmount = allTransactions.reduce((sum, t) => sum + parseFloat(t.price || '0'), 0)
-      const successCount = allTransactions.filter(t => t.is_success).length
-      const failedCount = allTransactions.length - successCount
-
       // Sort by time descending
       allTransactions.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
       
@@ -152,7 +141,6 @@ function TransactionsPage() {
         total,
         totalPages: Math.ceil(total / pagination.limit),
       }))
-      setSummary({ totalTransactions: total, totalAmount, successCount, failedCount })
     } catch (err) {
       setError('Không thể tải giao dịch thiết bị')
       console.error(err)
@@ -165,15 +153,16 @@ function TransactionsPage() {
     if (!user?.tenant?.id) {
       setQrPayments([])
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
-      setSummary({ totalTransactions: 0, totalAmount: 0, successCount: 0, failedCount: 0 })
       return
     }
     try {
       setLoading(true)
       setError('')
+      // API max pageSize is 100
+      const apiPageSize = Math.min(pagination.limit, 100)
       const params: Record<string, unknown> = {
         pageIndex: pagination.page,
-        pageSize: pagination.limit,
+        pageSize: apiPageSize,
         tenant_id: user.tenant.id,
       }
       if (filters.deviceUuid) params.device_uuid = filters.deviceUuid
@@ -191,13 +180,6 @@ function TransactionsPage() {
         total: data.count,
         totalPages: data.totalPages,
       }))
-      
-      // Calculate summary from all items (not just paginated)
-      const allItems = data.items || []
-      const totalAmount = allItems.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0)
-      const successCount = allItems.filter(p => p.status === 'paid').length
-      const failedCount = allItems.filter(p => p.status === 'failed').length
-      setSummary({ totalTransactions: data.count, totalAmount, successCount, failedCount })
     } catch (err) {
       setError('Không thể tải giao dịch QR')
       console.error(err)
@@ -216,7 +198,7 @@ function TransactionsPage() {
     } else {
       fetchQrPayments()
     }
-  }, [viewMode, pagination.page, pagination.limit, filters.deviceUuid, filters.paymentMethod, filters.dateFrom, filters.dateTo, filters.status, filters.search])
+  }, [viewMode, pagination.page, pagination.limit, filters.deviceUuid, filters.paymentMethod, filters.dateFrom, filters.dateTo, filters.status, filters.search, devices.length])
 
   const handlePageChange = (page: number) => {
     setPagination(prev => ({ ...prev, page }))
@@ -256,15 +238,6 @@ function TransactionsPage() {
             QR Payment
           </Button>
         </div>
-      </div>
-
-      {/* Summary Cards */}
-      <SectionLabel>tóm tắt</SectionLabel>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard value={summary.totalTransactions.toLocaleString()} label="Tổng giao dịch" />
-        <MetricCard value={formatCurrency(summary.totalAmount)} label="Tổng số tiền" />
-        <MetricCard value={summary.successCount.toLocaleString()} label="Thành công" />
-        <MetricCard value={summary.failedCount.toLocaleString()} label="Thất bại" />
       </div>
 
       {/* Filter Form */}
