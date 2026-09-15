@@ -34,10 +34,12 @@ function VietqrConfigPage() {
     try {
       setLoading(true)
       const response = await vietqrApi.getConfig()
+      console.log('VietQR config response:', response)
       setConfig(response)
       if (response.has_vietqr_config) {
         // Normalize bank value to match options (case-insensitive)
-        const bankValue = response.vietqr_bank?.toUpperCase() || ''
+        const bankValue = response.vietqr_bank?.toUpperCase().trim() || ''
+        console.log('Bank value from API:', response.vietqr_bank, '-> normalized:', bankValue)
         setFormData({
           vietqr_bank: bankValue,
           vietqr_account_number: response.vietqr_account_number,
@@ -178,7 +180,7 @@ function VietqrConfigPage() {
             </div>
 
             <Input
-              label="Số tài khoản <span className='text-status-fail'>*</span>"
+              label={<>Số tài khoản <span className='text-status-fail'>*</span></>}
               name="vietqr_account_number"
               value={formData.vietqr_account_number}
               onChange={handleChange}
@@ -189,7 +191,7 @@ function VietqrConfigPage() {
             />
 
             <Input
-              label="Tên chủ tài khoản <span className='text-status-fail'>*</span>"
+              label={<>Tên chủ tài khoản <span className='text-status-fail'>*</span></>}
               name="vietqr_account_name"
               value={formData.vietqr_account_name}
               onChange={handleChange}
