@@ -49,26 +49,21 @@ function ReportsPage() {
     byPaymentMethod: {} as Record<string, number>,
     byDevice: {} as Record<string, number>,
   })
-  const [debugInfo, setDebugInfo] = useState<string>('')
 
   const fetchReport = async () => {
     if (!user?.tenant?.id) {
       setError('Không xác định được tenant')
-      setDebugInfo('No tenant ID in user: ' + JSON.stringify(user?.tenant))
       return
     }
     try {
       setLoading(true)
       setError('')
-      setDebugInfo(`Fetching for tenant ID: ${user.tenant.id}`)
       const params: Record<string, string> = {}
       if (filters.deviceUuid) params.device_uuid = filters.deviceUuid
       if (filters.dateFrom) params.date_from = filters.dateFrom
       if (filters.dateTo) params.date_to = filters.dateTo
       
       const response = await reportApi.sales(params)
-      console.log('reportApi.sales response:', response)
-      setDebugInfo(`Response: ${JSON.stringify(response, null, 2)}`)
       const data = response as ReportResponse
       
       // Transform the response to match the expected format
@@ -121,14 +116,12 @@ setReportData(items)
     } catch (err) {
       setError('Không thể tải báo cáo doanh thu')
       console.error('Reports fetchReport error:', err)
-      setDebugInfo(`Error: ${err?.response?.data?.message || err?.message || err}`)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    console.log('ReportsPage useEffect triggered, user:', user)
     fetchReport()
   }, [filters.deviceUuid, filters.dateFrom, filters.dateTo, user?.tenant?.id])
 
@@ -144,12 +137,6 @@ setReportData(items)
           <p className="text-sm text-text-muted mt-1">Xem hiệu suất bán hàng và phân tích</p>
         </div>
       </div>
-
-      {debugInfo && (
-        <div className="p-3 text-xs font-mono bg-bg-base border border-border-subtle rounded-[4px] text-text-muted">
-          Debug: {debugInfo}
-        </div>
-      )}
 
       <SectionLabel>tóm tắt</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

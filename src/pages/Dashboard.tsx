@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/utils'
+import { CodeBlock } from '@/components/ui/code-block'
+import { StatusBadge } from '@/components/ui/status-badge'
 
 interface SalesReport {
   total_devices: number
@@ -29,6 +31,15 @@ interface PaginatedResponse<T> {
   totalPages: number
 }
 
+const paymentMethodLabels: Record<string, string> = {
+  cash: 'Tiền mặt',
+  coin: 'Xu',
+  card: 'Thẻ',
+  mobile_pay: 'Ví điện tử',
+  qr_code: 'Mã QR',
+  other: 'Khác',
+}
+
 function Dashboard() {
   const { user } = useAuth()
   const [stats, setStats] = useState({
@@ -44,11 +55,10 @@ function Dashboard() {
     todayTransactions: 0,
   })
   const [topDevices, setTopDevices] = useState<Array<{ device_uuid: string; total_sales: string; transaction_count: number }>>([])
+  const [recentTransactions, setRecentTransactions] = useState<Array<{ tx_number: string; device_uuid: string; user_info: { name: string } | null; payment_method: string; price: string; item: string; is_success: boolean; time: string }>>([])
   const [loading, setLoading] = useState(true)
-  const [debugInfo, setDebugInfo] = useState<string>('')
 
   useEffect(() => {
-    console.log('Dashboard useEffect triggered, user:', user)
     fetchStats()
   }, [user?.tenant?.id])
 
@@ -92,13 +102,11 @@ function Dashboard() {
 
   const fetchStats = async () => {
     if (!user?.tenant?.id) {
-      setDebugInfo('No tenant ID in user: ' + JSON.stringify(user?.tenant))
       setLoading(false)
       return
     }
     try {
       setLoading(true)
-      setDebugInfo(`Fetching for tenant ID: ${user.tenant.id}`)
       // Use tenant-scoped endpoints (auto-scoped via JWT)
       const [usersRes, devicesRes, salesRes] = await Promise.all([
         tenantUserApi.list({ pageSize: 1 }),
@@ -106,15 +114,8 @@ function Dashboard() {
         reportApi.sales({ pageSize: 1 }),
       ])
       
-      console.log('usersRes:', usersRes)
-      console.log('devicesRes:', devicesRes)
-      console.log('salesRes:', salesRes)
-      setDebugInfo(`usersRes: ${JSON.stringify(usersRes, null, 2)} | devicesRes: ${JSON.stringify(devicesRes, null, 2)} | salesRes: ${JSON.stringify(salesRes, null, 2)}`)
-      
       // Fetch all users to calculate total balance (paginated)
       const allUsers = await fetchAllUsers()
-      console.log('allUsers count:', allUsers.length)
-      setDebugInfo(prev => prev + ` | allUsers count: ${allUsers.length}`)
       const totalBalance = allUsers.reduce((sum, u) => sum + parseFloat(u.balance || '0'), 0)
 
       const salesData = salesRes as SalesReport
@@ -133,6 +134,23 @@ function Dashboard() {
         parseFloat(b.total_sales || '0') - parseFloat(a.total_sales || '0')
       ).slice(0, 5)
 
+      // Fetch recent transactions from all devices (limit to 5 most recent)
+      const devices = devicesRes?.items || []
+      if (devices.length > 0) {
+        const transactionParams = { pageIndex: 1, pageSize: 10 }
+        const transactionResponses = await Promise.all(
+          devices.slice(0, 10).map(d => 
+            deviceApi.listTransactions(d.uuid, transactionParams).catch(err => {
+              console.error(`Failed to fetch transactions for device ${d.uuid}:`, err)
+              return { items: [], count: 0, pageIndex: 1, pageSize: 10, totalPages: 0 }
+            })
+          )
+        )
+        const allTransactions = transactionResponses.flatMap(r => (r as any).items || [])
+        allTransactions.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+        setRecentTransactions(allTransactions.slice(0, 5))
+      }
+
       setStats({
         totalUsers: usersRes?.count || 0,
         totalDevices: devicesRes?.count || 0,
@@ -142,13 +160,12 @@ function Dashboard() {
         totalTransactions,
         successTransactions,
         failedTransactions,
-        todaySales: totalSales, // API doesn't provide today-specific, use total as placeholder
+        todaySales: totalSales,
         todayTransactions: totalTransactions,
       })
       setTopDevices(sortedDevices)
     } catch (err) {
       console.error('Dashboard fetchStats error:', err)
-      setDebugInfo(`Error: ${err?.response?.data?.message || err?.message || err}`)
     } finally {
       setLoading(false)
     }
@@ -170,12 +187,6 @@ function Dashboard() {
           <p className="text-sm text-text-muted mt-1">Tổng quan tenant và thao tác nhanh</p>
         </div>
       </div>
-
-      {debugInfo && (
-        <div className="p-3 text-xs font-mono bg-bg-base border border-border-subtle rounded-[4px] text-text-muted">
-          Debug: {debugInfo}
-        </div>
-      )}
 
       <SectionLabel>thống kê</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-4">
@@ -256,10 +267,47 @@ function Dashboard() {
           <CardTitle>Giao dịch mới nhất</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="flex flex-col items-center justify-center h-40 text-text-muted">
-            <Activity className="h-10 w-10 mb-3 opacity-30" />
-            <p className="text-sm font-mono">Chưa có hoạt động gần đây</p>
-          </div>
+          {recentTransactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-40 text-text-muted">
+              <Activity className="h-10 w-10 mb-3 opacity-30" />
+              <p className="text-sm font-mono">Chưa có hoạt động gần đây</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-mono">
+                <thead>
+                  <tr className="border-b border-border-subtle bg-bg-base">
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số TX</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Người dùng</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Món hàng</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
+                    <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentTransactions.map((tx) => (
+                    <tr key={tx.tx_number} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
+                      <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
+                      <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
+                      <td className="px-4 py-3">{tx.user_info?.name || <span className="text-text-muted">—</span>}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
+                          {paymentMethodLabels[tx.payment_method] || tx.payment_method}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
+                      <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
+                      <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} /></td>
+                      <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

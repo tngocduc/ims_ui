@@ -105,11 +105,13 @@ function TransactionsPage() {
         return
       }
 
+      // For pagination across multiple devices, we fetch the same page from each device
+      // This is an approximation but works for time-sorted data
       // API max pageSize is 100
-      const apiPageSize = Math.min(pagination.limit * deviceUuids.length, 100)
+      const apiPageSize = Math.min(pagination.limit, 100)
       
       const params: Record<string, unknown> = {
-        pageIndex: 1,
+        pageIndex: pagination.page,
         pageSize: apiPageSize,
       }
       if (filters.paymentMethod) params.payment_method = filters.paymentMethod
@@ -119,23 +121,20 @@ function TransactionsPage() {
       const responses = await Promise.all(
         deviceUuids.map(uuid => deviceApi.listTransactions(uuid, params).catch(err => {
           console.error(`Failed to fetch transactions for device ${uuid}:`, err)
-          return { items: [], count: 0, pageIndex: 1, pageSize: apiPageSize, totalPages: 0 }
+          return { items: [], count: 0, pageIndex: pagination.page, pageSize: apiPageSize, totalPages: 0 }
         }))
       )
 
-      // Merge all transactions
+      // Merge all transactions from current page across all devices
       const allTransactions = responses.flatMap(r => (r as any).items || [])
       
       // Sort by time descending
       allTransactions.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
       
-      // Apply client-side pagination
+      // Total count is sum of all devices' total counts
       const total = responses.reduce((sum, r) => sum + ((r as any).count || 0), 0)
-      const start = (pagination.page - 1) * pagination.limit
-      const end = start + pagination.limit
-      const paginatedTransactions = allTransactions.slice(start, end)
 
-      setTransactions(paginatedTransactions)
+      setTransactions(allTransactions)
       setPagination(prev => ({
         ...prev,
         total,
