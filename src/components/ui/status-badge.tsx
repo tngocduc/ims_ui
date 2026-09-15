@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-type Status = 'pass' | 'fail' | 'error' | 'running' | 'needs_review'
+type Status = 'pass' | 'fail' | 'error' | 'running' | 'needs_review' | 'pending'
 
 const statusLabels: Record<Status, string> = {
   pass: 'pass',
@@ -8,6 +8,7 @@ const statusLabels: Record<Status, string> = {
   error: 'error',
   running: 'running',
   needs_review: 'needs_review',
+  pending: 'pending',
 }
 
 const statusColors: Record<Status, string> = {
@@ -16,6 +17,7 @@ const statusColors: Record<Status, string> = {
   error: 'bg-status-error/10 text-status-error border-status-error/20',
   running: 'bg-status-running/10 text-status-running border-status-running/20',
   needs_review: 'bg-status-review/10 text-status-review border-status-review/20',
+  pending: 'bg-status-warning/10 text-status-warning border-status-warning/20',
 }
 
 interface StatusBadgeProps {

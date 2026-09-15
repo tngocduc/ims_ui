@@ -5,9 +5,9 @@ import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Server } from 'lucide-react'
+import { Server, CreditCard, QrCode } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { deviceApi } from '@/lib/api'
+import { deviceApi, qrPaymentApi, QrPayment } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
 interface Device {
@@ -33,6 +33,8 @@ interface Transaction {
   time: string
 }
 
+type ViewMode = 'device' | 'qr'
+
 const paymentMethodLabels: Record<string, string> = {
   cash: 'Tiền mặt',
   coin: 'Xu',
@@ -42,9 +44,19 @@ const paymentMethodLabels: Record<string, string> = {
   other: 'Khác',
 }
 
+const qrStatusLabels: Record<string, string> = {
+  pending: 'Đang chờ',
+  paid: 'Đã thanh toán',
+  failed: 'Thất bại',
+  expired: 'Hết hạn',
+  refunded: 'Đã hoàn tiền',
+}
+
 function TransactionsPage() {
   const { user } = useAuth()
+  const [viewMode, setViewMode] = useState<ViewMode>('device')
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [qrPayments, setQrPayments] = useState<QrPayment[]>([])
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [devicesLoading, setDevicesLoading] = useState(true)
@@ -55,6 +67,8 @@ function TransactionsPage() {
     paymentMethod: '',
     dateFrom: '',
     dateTo: '',
+    status: '',
+    search: '',
   })
 
   const fetchDevices = async () => {
@@ -71,7 +85,7 @@ function TransactionsPage() {
     }
   }
 
-  const fetchTransactions = async () => {
+  const fetchDeviceTransactions = async () => {
     if (!filters.deviceUuid) {
       setTransactions([])
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
@@ -97,7 +111,44 @@ function TransactionsPage() {
         totalPages: data.totalPages,
       }))
     } catch (err) {
-      setError('Không thể tải giao dịch')
+      setError('Không thể tải giao dịch thiết bị')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchQrPayments = async () => {
+    if (!user?.tenant?.id) {
+      setQrPayments([])
+      setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
+      return
+    }
+    try {
+      setLoading(true)
+      setError('')
+      const params: Record<string, unknown> = {
+        pageIndex: pagination.page,
+        pageSize: pagination.limit,
+        tenant_id: user.tenant.id,
+      }
+      if (filters.deviceUuid) params.device_uuid = filters.deviceUuid
+      if (filters.paymentMethod) params.payment_method = filters.paymentMethod
+      if (filters.status) params.status = filters.status
+      if (filters.dateFrom) params.date_from = filters.dateFrom
+      if (filters.dateTo) params.date_to = filters.dateTo
+      if (filters.search) params.search = filters.search
+
+      const response = await qrPaymentApi.list(params)
+      const data = response as { items: QrPayment[]; count: number; pageIndex: number; pageSize: number; totalPages: number }
+      setQrPayments(data.items || [])
+      setPagination(prev => ({
+        ...prev,
+        total: data.count,
+        totalPages: data.totalPages,
+      }))
+    } catch (err) {
+      setError('Không thể tải giao dịch QR')
       console.error(err)
     } finally {
       setLoading(false)
@@ -109,8 +160,12 @@ function TransactionsPage() {
   }, [user?.tenant?.id])
 
   useEffect(() => {
-    fetchTransactions()
-  }, [pagination.page, pagination.limit, filters.deviceUuid, filters.paymentMethod, filters.dateFrom, filters.dateTo])
+    if (viewMode === 'device') {
+      fetchDeviceTransactions()
+    } else {
+      fetchQrPayments()
+    }
+  }, [viewMode, pagination.page, pagination.limit, filters.deviceUuid, filters.paymentMethod, filters.dateFrom, filters.dateTo, filters.status, filters.search])
 
   const handlePageChange = (page: number) => {
     setPagination(prev => ({ ...prev, page }))
@@ -132,6 +187,24 @@ function TransactionsPage() {
           <h1 className="text-2xl font-medium text-text-primary">Giao dịch</h1>
           <p className="text-sm text-text-muted mt-1">Xem và quản lý lịch sử giao dịch</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'device' ? 'primary' : 'ghost'}
+            onClick={() => { setViewMode('device'); handleFilterChange('deviceUuid', ''); }}
+            className="gap-1.5"
+          >
+            <CreditCard className="h-4 w-4" />
+            Thiết bị
+          </Button>
+          <Button
+            variant={viewMode === 'qr' ? 'primary' : 'ghost'}
+            onClick={() => { setViewMode('qr'); handleFilterChange('deviceUuid', ''); }}
+            className="gap-1.5"
+          >
+            <QrCode className="h-4 w-4" />
+            QR Payment
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -143,7 +216,7 @@ function TransactionsPage() {
                 value={filters.deviceUuid}
                 onChange={(e) => handleFilterChange('deviceUuid', e.target.value)}
                 options={[
-                  { value: '', label: 'Chọn thiết bị' },
+                  { value: '', label: 'Tất cả thiết bị' },
                   ...devices.map(d => ({ value: d.uuid, label: `${d.uuid} (${d.type_name})` })),
                 ]}
                 disabled={devicesLoading}
@@ -162,6 +235,20 @@ function TransactionsPage() {
                 { value: 'other', label: 'Khác' },
               ]}
             />
+            {viewMode === 'qr' && (
+              <Select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                options={[
+                  { value: '', label: 'Tất cả trạng thái' },
+                  { value: 'pending', label: 'Đang chờ' },
+                  { value: 'paid', label: 'Đã thanh toán' },
+                  { value: 'failed', label: 'Thất bại' },
+                  { value: 'expired', label: 'Hết hạn' },
+                  { value: 'refunded', label: 'Đã hoàn tiền' },
+                ]}
+              />
+            )}
             <div className="min-w-[160px]">
               <label className="block text-xs font-medium text-text-muted mb-1.5">Từ ngày</label>
               <Input
@@ -178,6 +265,17 @@ function TransactionsPage() {
                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
               />
             </div>
+            {viewMode === 'qr' && (
+              <div className="min-w-[200px]">
+                <label className="block text-xs font-medium text-text-muted mb-1.5">Tìm kiếm</label>
+                <Input
+                  placeholder="Transaction ID hoặc Order ID"
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
@@ -200,41 +298,90 @@ function TransactionsPage() {
                 <table className="w-full text-sm font-mono">
                   <thead>
                     <tr className="border-b border-border-subtle bg-bg-base">
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số TX</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Người dùng</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Món hàng</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
-                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thời gian</th>
+                      {viewMode === 'device' ? (
+                        <>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số TX</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Người dùng</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Món hàng</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thời gian</th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Transaction ID</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Provider Order ID</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Tạo lúc</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thanh toán lúc</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-12 text-center text-text-muted">
-                          <Server className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                          <p>Không tìm thấy giao dịch</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      transactions.map((tx) => (
-                        <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3">{tx.user_info?.name || <span className="text-text-muted">—</span>}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
-                              {paymentMethodLabels[tx.payment_method] || tx.payment_method}
-                            </span>
+                    {viewMode === 'device' ? (
+                      transactions.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-12 text-center text-text-muted">
+                            <Server className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                            <p>Không tìm thấy giao dịch</p>
                           </td>
-                          <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} /></td>
-                          <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
                         </tr>
-                      ))
+                      ) : (
+                        transactions.map((tx) => (
+                          <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
+                            <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3">{tx.user_info?.name || <span className="text-text-muted">—</span>}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
+                                {paymentMethodLabels[tx.payment_method] || tx.payment_method}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} /></td>
+                            <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
+                          </tr>
+                        ))
+                      )
+                    ) : (
+                      qrPayments.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-12 text-center text-text-muted">
+                            <QrCode className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                            <p>Không tìm thấy giao dịch QR</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        qrPayments.map((p) => (
+                          <tr key={p.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
+                            <td className="px-4 py-3"><CodeBlock code={p.transaction_id} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={p.provider_order_id} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={p.device_uuid} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(p.amount))} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
+                                {p.payment_method}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <StatusBadge status={
+                                p.status === 'paid' ? 'pass' :
+                                p.status === 'failed' ? 'fail' :
+                                p.status === 'pending' ? 'pending' : 'pending'
+                              } />
+                            </td>
+                            <td className="px-4 py-3 text-text-muted">{new Date(p.created_at).toLocaleString('vi-VN')}</td>
+                            <td className="px-4 py-3 text-text-muted">{p.paid_at ? new Date(p.paid_at).toLocaleString('vi-VN') : <span className="text-text-muted">—</span>}</td>
+                          </tr>
+                        ))
+                      )
                     )}
                   </tbody>
                 </table>

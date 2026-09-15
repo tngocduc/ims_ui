@@ -378,6 +378,37 @@ export const reportApi = {
     api.get<{ status: string; data: unknown }>(`/core/tenants/${tenantId}/reports/sales`, { params }).then(extractData),
 }
 
+export interface QrPayment {
+  id: number
+  transaction_id: string
+  provider_order_id: string
+  tenant_id: number
+  device_uuid: string
+  amount: string
+  status: string
+  payment_method: string
+  created_at: string
+  updated_at: string
+  paid_at: string | null
+}
+
+export interface PaginatedQrPayments {
+  items: QrPayment[]
+  count: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+export const qrPaymentApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<{ status: string; data: PaginatedQrPayments }>('/core/tenant/qr-payments', { params: mapPaginationParams(params) }).then(extractData),
+  get: (transactionId: string, tenantId?: number) =>
+    api.get<{ status: string; data: QrPayment }>(`/core/tenant/qr-payments/${transactionId}`, { params: tenantId ? { tenant_id: tenantId } : {} }).then(extractData),
+  stats: (tenantId: number) =>
+    api.get<{ status: string; data: unknown }>('/core/tenant/qr-payments/stats', { params: { tenant_id: tenantId } }).then(extractData),
+}
+
 export const balanceApi = {
   check: (data: { device_uuid: string; check_type: 'card' | 'mobile_pay' | 'qr_code'; check_value: string }) =>
     api.post('/core/balance/check', data).then(extractData),
