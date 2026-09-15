@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react'
-import { tenantUserApi, deviceApi } from '@/lib/api'
+import { tenantUserApi, deviceApi, reportApi } from '@/lib/api'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Button } from '@/components/ui/button'
-import { Plus, Server, DollarSign, BarChart2, Activity } from 'lucide-react'
+import { Plus, Server, DollarSign, BarChart2, Activity, TrendingUp, Users, Wifi, Wallet } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
 import { useAuth } from '@/context/AuthContext'
 import { formatCurrency } from '@/lib/utils'
+
+interface SalesReport {
+  total_sales: string
+  transaction_count: number
+  external_total_sales: string
+  external_transaction_count: number
+  by_device: Array<{ device_uuid: string; total_sales: string; transaction_count: number }>
+  by_payment_method: Array<{ payment_method: string; total_sales: string; transaction_count: number }>
+}
 
 function Dashboard() {
   const { user } = useAuth()
@@ -15,7 +24,12 @@ function Dashboard() {
     totalDevices: 0,
     onlineDevices: 0,
     totalBalance: 0,
+    totalSales: 0,
+    totalTransactions: 0,
+    todaySales: 0,
+    todayTransactions: 0,
   })
+  const [topDevices, setTopDevices] = useState<Array<{ device_uuid: string; total_sales: string; transaction_count: number }>>([])
   const [loading, setLoading] = useState(true)
   const [debugInfo, setDebugInfo] = useState<string>('')
 
@@ -34,14 +48,16 @@ function Dashboard() {
       setLoading(true)
       setDebugInfo(`Fetching for tenant ID: ${user.tenant.id}`)
       // Use tenant-scoped endpoints (auto-scoped via JWT)
-      const [usersRes, devicesRes] = await Promise.all([
+      const [usersRes, devicesRes, salesRes] = await Promise.all([
         tenantUserApi.list({ pageSize: 1 }),
         deviceApi.listStatus({ pageSize: 1 }),
+        reportApi.sales({ pageSize: 1 }),
       ])
       
       console.log('usersRes:', usersRes)
       console.log('devicesRes:', devicesRes)
-      setDebugInfo(`usersRes: ${JSON.stringify(usersRes, null, 2)} | devicesRes: ${JSON.stringify(devicesRes, null, 2)}`)
+      console.log('salesRes:', salesRes)
+      setDebugInfo(`usersRes: ${JSON.stringify(usersRes, null, 2)} | devicesRes: ${JSON.stringify(devicesRes, null, 2)} | salesRes: ${JSON.stringify(salesRes, null, 2)}`)
       
       // Fetch all users to calculate total balance
       const allUsersRes = await tenantUserApi.list({ pageSize: 1000 })
@@ -52,12 +68,26 @@ function Dashboard() {
         totalBalance = allUsersRes.items.reduce((sum: number, u: { balance: string }) => sum + parseFloat(u.balance || '0'), 0)
       }
 
+      const salesData = salesRes as SalesReport
+      const totalSales = parseFloat(salesData.total_sales || '0') + parseFloat(salesData.external_total_sales || '0')
+      const totalTransactions = salesData.transaction_count + salesData.external_transaction_count
+
+      // Sort top devices by sales
+      const sortedDevices = [...(salesData.by_device || [])].sort((a, b) => 
+        parseFloat(b.total_sales || '0') - parseFloat(a.total_sales || '0')
+      ).slice(0, 5)
+
       setStats({
         totalUsers: usersRes?.count || 0,
         totalDevices: devicesRes?.count || 0,
         onlineDevices: devicesRes?.items?.filter((d: { status: string }) => d.status === 'online').length || 0,
         totalBalance,
+        totalSales,
+        totalTransactions,
+        todaySales: totalSales, // API doesn't provide today-specific, use total as placeholder
+        todayTransactions: totalTransactions,
       })
+      setTopDevices(sortedDevices)
     } catch (err) {
       console.error('Dashboard fetchStats error:', err)
       setDebugInfo(`Error: ${err?.response?.data?.message || err?.message || err}`)
@@ -90,11 +120,15 @@ function Dashboard() {
       )}
 
       <SectionLabel>thống kê</SectionLabel>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard value={stats.totalUsers} label="Tổng người dùng" />
-        <MetricCard value={stats.totalDevices} label="Tổng thiết bị" />
-        <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" />
-        <MetricCard value={formatCurrency(stats.totalBalance)} label="Tổng số dư" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-4">
+        <MetricCard value={stats.totalUsers} label="Tổng người dùng" icon={<Users className="h-5 w-5" />} />
+        <MetricCard value={stats.totalDevices} label="Tổng thiết bị" icon={<Server className="h-5 w-5" />} />
+        <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" icon={<Wifi className="h-5 w-5" />} />
+        <MetricCard value={formatCurrency(stats.totalBalance)} label="Tổng số dư" icon={<Wallet className="h-5 w-5" />} />
+        <MetricCard value={formatCurrency(stats.totalSales)} label="Tổng doanh thu" icon={<DollarSign className="h-5 w-5" />} />
+        <MetricCard value={stats.totalTransactions.toLocaleString()} label="Tổng giao dịch" icon={<Activity className="h-5 w-5" />} />
+        <MetricCard value={formatCurrency(stats.todaySales)} label="Doanh thu hôm nay" icon={<TrendingUp className="h-5 w-5" />} />
+        <MetricCard value={stats.todayTransactions.toLocaleString()} label="Giao dịch hôm nay" icon={<Activity className="h-5 w-5" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -126,16 +160,50 @@ function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Hoạt động gần đây</CardTitle>
+            <CardTitle>Thiết bị bán chạy nhất</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex flex-col items-center justify-center h-40 text-text-muted">
-              <Activity className="h-10 w-10 mb-3 opacity-30" />
-              <p className="text-sm font-mono">Chưa có hoạt động gần đây</p>
-            </div>
+            {topDevices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-text-muted">
+                <Server className="h-10 w-10 mb-3 opacity-30" />
+                <p className="text-sm font-mono">Chưa có dữ liệu bán hàng</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topDevices.map((device, index) => (
+                  <div key={device.device_uuid} className="flex items-center justify-between p-3 bg-bg-base rounded-[4px] border border-border-subtle">
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 h-6 flex items-center justify-center text-xs font-medium text-text-muted bg-bg-surface border border-border-subtle rounded-full">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="font-mono text-sm">{device.device_uuid}</p>
+                        <p className="text-xs text-text-muted">{device.transaction_count} giao dịch</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-sm font-medium">{formatCurrency(parseFloat(device.total_sales || '0'))}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <SectionLabel>hoạt động gần đây</SectionLabel>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Giao dịch mới nhất</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex flex-col items-center justify-center h-40 text-text-muted">
+            <Activity className="h-10 w-10 mb-3 opacity-30" />
+            <p className="text-sm font-mono">Chưa có hoạt động gần đây</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

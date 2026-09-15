@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, SectionLabel } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
+import { MetricCard } from '@/components/ui/metric-card'
 import { Server, CreditCard, QrCode } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { deviceApi, qrPaymentApi, QrPayment } from '@/lib/api'
@@ -71,6 +72,14 @@ function TransactionsPage() {
     search: '',
   })
 
+  // Summary state
+  const [summary, setSummary] = useState({
+    totalTransactions: 0,
+    totalAmount: 0,
+    successCount: 0,
+    failedCount: 0,
+  })
+
   const fetchDevices = async () => {
     if (!user?.tenant?.id) return
     try {
@@ -86,30 +95,64 @@ function TransactionsPage() {
   }
 
   const fetchDeviceTransactions = async () => {
-    if (!filters.deviceUuid) {
+    if (!user?.tenant?.id) {
       setTransactions([])
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
+      setSummary({ totalTransactions: 0, totalAmount: 0, successCount: 0, failedCount: 0 })
       return
     }
     try {
       setLoading(true)
       setError('')
+
+      const deviceUuids = filters.deviceUuid ? [filters.deviceUuid] : devices.map(d => d.uuid)
+
+      if (deviceUuids.length === 0) {
+        setTransactions([])
+        setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
+        setSummary({ totalTransactions: 0, totalAmount: 0, successCount: 0, failedCount: 0 })
+        return
+      }
+
       const params: Record<string, unknown> = {
-        pageIndex: pagination.page,
-        pageSize: pagination.limit,
+        pageIndex: 1,
+        pageSize: pagination.limit * deviceUuids.length,
       }
       if (filters.paymentMethod) params.payment_method = filters.paymentMethod
       if (filters.dateFrom) params.date_from = filters.dateFrom
       if (filters.dateTo) params.date_to = filters.dateTo
 
-      const response = await deviceApi.listTransactions(filters.deviceUuid, params)
-      const data = response as { items: Transaction[]; count: number; pageIndex: number; pageSize: number; totalPages: number }
-      setTransactions(data.items || [])
+      const responses = await Promise.all(
+        deviceUuids.map(uuid => deviceApi.listTransactions(uuid, params).catch(err => {
+          console.error(`Failed to fetch transactions for device ${uuid}:`, err)
+          return { items: [], count: 0, pageIndex: 1, pageSize: params.pageSize, totalPages: 0 }
+        }))
+      )
+
+      // Merge all transactions
+      const allTransactions = responses.flatMap(r => (r as any).items || [])
+      
+      // Calculate summary from all transactions
+      const totalAmount = allTransactions.reduce((sum, t) => sum + parseFloat(t.price || '0'), 0)
+      const successCount = allTransactions.filter(t => t.is_success).length
+      const failedCount = allTransactions.length - successCount
+
+      // Sort by time descending
+      allTransactions.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      
+      // Apply client-side pagination
+      const total = responses.reduce((sum, r) => sum + ((r as any).count || 0), 0)
+      const start = (pagination.page - 1) * pagination.limit
+      const end = start + pagination.limit
+      const paginatedTransactions = allTransactions.slice(start, end)
+
+      setTransactions(paginatedTransactions)
       setPagination(prev => ({
         ...prev,
-        total: data.count,
-        totalPages: data.totalPages,
+        total,
+        totalPages: Math.ceil(total / pagination.limit),
       }))
+      setSummary({ totalTransactions: total, totalAmount, successCount, failedCount })
     } catch (err) {
       setError('Không thể tải giao dịch thiết bị')
       console.error(err)
@@ -122,6 +165,7 @@ function TransactionsPage() {
     if (!user?.tenant?.id) {
       setQrPayments([])
       setPagination(prev => ({ ...prev, total: 0, totalPages: 0 }))
+      setSummary({ totalTransactions: 0, totalAmount: 0, successCount: 0, failedCount: 0 })
       return
     }
     try {
@@ -147,6 +191,13 @@ function TransactionsPage() {
         total: data.count,
         totalPages: data.totalPages,
       }))
+      
+      // Calculate summary from all items (not just paginated)
+      const allItems = data.items || []
+      const totalAmount = allItems.reduce((sum, p) => sum + parseFloat(p.amount || '0'), 0)
+      const successCount = allItems.filter(p => p.status === 'paid').length
+      const failedCount = allItems.filter(p => p.status === 'failed').length
+      setSummary({ totalTransactions: data.count, totalAmount, successCount, failedCount })
     } catch (err) {
       setError('Không thể tải giao dịch QR')
       console.error(err)
@@ -207,9 +258,22 @@ function TransactionsPage() {
         </div>
       </div>
 
+      {/* Summary Cards */}
+      <SectionLabel>tóm tắt</SectionLabel>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard value={summary.totalTransactions.toLocaleString()} label="Tổng giao dịch" />
+        <MetricCard value={formatCurrency(summary.totalAmount)} label="Tổng số tiền" />
+        <MetricCard value={summary.successCount.toLocaleString()} label="Thành công" />
+        <MetricCard value={summary.failedCount.toLocaleString()} label="Thất bại" />
+      </div>
+
+      {/* Filter Form */}
       <Card>
-        <CardContent className="pt-4">
-          <form className="flex flex-wrap items-end gap-4" role="search">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Bộ lọc</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <form className="flex flex-wrap items-end gap-4" onSubmit={(e) => e.preventDefault()}>
             <div className="flex-1 min-w-[200px]">
               <label className="block text-xs font-medium text-text-muted mb-1.5">Thiết bị</label>
               <Select
@@ -276,6 +340,9 @@ function TransactionsPage() {
                 />
               </div>
             )}
+            <Button type="submit" disabled={loading} className="h-9">
+              {loading ? 'Đang tải...' : 'Áp dụng bộ lọc'}
+            </Button>
           </form>
         </CardContent>
       </Card>
