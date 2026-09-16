@@ -157,9 +157,9 @@ function RefundQueuePage() {
               value={filters.refundStatus}
               onChange={(e) => handleFilterChange('refundStatus', e.target.value)}
               options={[
-                { value: 'required', label: 'Cần hoàn tiền' },
-                { value: 'refunded', label: 'Đã hoàn tiền' },
-                { value: 'failed', label: 'Cần hoàn tiền' },
+                { value: 'required', label: 'Chưa hoàn' },
+                { value: 'refunded', label: 'Đã hoàn' },
+                { value: 'failed', label: 'Chưa hoàn' },
               ]}
             />
             <div className="min-w-[160px]">
@@ -237,23 +237,30 @@ function RefundQueuePage() {
                           </td>
                           <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" className="inline" /></td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={tx.vend_status === 'failed' ? 'fail' : 'pending'}>
-                              {vendStatusLabels[tx.vend_status] || tx.vend_status}
-                            </StatusBadge>
+                            {(() => {
+                              const status = tx.vend_status
+                              if (!status || status === 'pending') {
+                                return <StatusBadge status="pending" label="N/A" />
+                              }
+                              if (status === 'success') {
+                                return <StatusBadge status="pass" label="OK" />
+                              }
+                              return <StatusBadge status="fail" label="Error" />
+                            })()}
                           </td>
                           <td className="px-4 py-3">
                             {(() => {
                               const status = tx.refund_status || 'none'
                               if (status === 'none' || !status) {
-                                return <StatusBadge status="pending">N/A</StatusBadge>
+                                return <StatusBadge status="pending" label="N/A" />
                               }
                               if (status === 'required' || status === 'failed') {
-                                return <StatusBadge status="fail">Cần hoàn tiền</StatusBadge>
+                                return <StatusBadge status="fail" label="Chưa hoàn" />
                               }
                               if (status === 'refunded') {
-                                return <StatusBadge status="pass">Đã hoàn tiền</StatusBadge>
+                                return <StatusBadge status="pass" label="Đã hoàn" />
                               }
-                              return <StatusBadge status="pending">{refundStatusLabels[status] || status}</StatusBadge>
+                              return <StatusBadge status="pending" label="N/A" />
                             })()}
                           </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>

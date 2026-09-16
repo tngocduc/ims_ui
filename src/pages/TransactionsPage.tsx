@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, SectionLabel } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Server, CreditCard, QrCode, RotateCcw } from 'lucide-react'
+import { Server, CreditCard, QrCode } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { deviceApi, qrPaymentApi, DeviceTransaction, QrPayment } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -25,45 +25,23 @@ const paymentMethodLabels: Record<string, string> = {
   other: 'Khác',
 }
 
-const qrStatusLabels: Record<string, string> = {
-  pending: 'Đang chờ',
-  paid: 'Đã thanh toán',
-  failed: 'Thất bại',
-  expired: 'Hết hạn',
-  refunded: 'Đã hoàn tiền',
-}
-
-const vendStatusLabels: Record<string, string> = {
-  pending: 'Đang chờ trả hàng',
-  success: 'Đã trả hàng',
-  failed: 'Trả hàng thất bại',
-  timeout: 'Hết thời gian chờ',
-}
-
-const refundStatusLabels: Record<string, string> = {
-  none: 'N/A',
-  required: 'Cần hoàn tiền',
-  refunded: 'Đã hoàn tiền',
-  failed: 'Cần hoàn tiền',
-}
-
 function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; variant: 'pass' | 'fail' | 'pending' } {
   if (tx.is_success && tx.vend_status === 'success') {
-    return { label: 'Hoàn tất', variant: 'pass' }
+    return { label: 'OK', variant: 'pass' }
   }
   if (tx.vend_status === 'pending') {
-    return { label: 'Đã thanh toán, chờ trả hàng', variant: 'pending' }
+    return { label: 'N/A', variant: 'pending' }
   }
   if (tx.vend_status === 'failed' && tx.refund_status === 'required') {
-    return { label: 'Cần hoàn tiền', variant: 'fail' }
+    return { label: 'Error', variant: 'fail' }
   }
   if (tx.vend_status === 'timeout' && tx.refund_status === 'required') {
-    return { label: 'Cần hoàn tiền (timeout)', variant: 'fail' }
+    return { label: 'Error', variant: 'fail' }
   }
   if (tx.refund_status === 'refunded') {
-    return { label: 'Đã hoàn tiền', variant: 'pass' }
+    return { label: 'OK', variant: 'pass' }
   }
-  return { label: tx.is_success ? 'Thành công' : 'Thất bại', variant: tx.is_success ? 'pass' : 'fail' }
+  return { label: tx.is_success ? 'OK' : 'Error', variant: tx.is_success ? 'pass' : 'fail' }
 }
 
 function TransactionsPage() {
@@ -442,27 +420,34 @@ transactions.map((tx) => (
                               <td className="px-4 py-3">
                                 {(() => {
                                   const { label, variant } = getTransactionStatusLabel(tx)
-                                  return <StatusBadge status={variant}>{label}</StatusBadge>
+                                  return <StatusBadge status={variant} label={label} />
                                 })()}
                               </td>
                               <td className="px-4 py-3">
-                                <StatusBadge status={tx.vend_status === 'success' ? 'pass' : tx.vend_status === 'pending' ? 'pending' : 'fail'}>
-                                  {vendStatusLabels[tx.vend_status] || tx.vend_status || 'N/A'}
-                                </StatusBadge>
+                                {(() => {
+                                  const status = tx.vend_status
+                                  if (!status || status === 'pending') {
+                                    return <StatusBadge status="pending" label="N/A" />
+                                  }
+                                  if (status === 'success') {
+                                    return <StatusBadge status="pass" label="OK" />
+                                  }
+                                  return <StatusBadge status="fail" label="Error" />
+                                })()}
                               </td>
                               <td className="px-4 py-3">
                                 {(() => {
                                   const status = tx.refund_status || 'none'
                                   if (status === 'none' || !status) {
-                                    return <StatusBadge status="pending">N/A</StatusBadge>
+                                    return <StatusBadge status="pending" label="N/A" />
                                   }
                                   if (status === 'required' || status === 'failed') {
-                                    return <StatusBadge status="fail">Cần hoàn tiền</StatusBadge>
+                                    return <StatusBadge status="fail" label="Chưa hoàn" />
                                   }
                                   if (status === 'refunded') {
-                                    return <StatusBadge status="pass">Đã hoàn tiền</StatusBadge>
+                                    return <StatusBadge status="pass" label="Đã hoàn" />
                                   }
-                                  return <StatusBadge status="pending">{refundStatusLabels[status] || status}</StatusBadge>
+                                  return <StatusBadge status="pending" label="N/A" />
                                 })()}
                               </td>
                               <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
@@ -493,10 +478,12 @@ transactions.map((tx) => (
                               <StatusBadge status={
                                 p.status === 'paid' ? 'pass' :
                                 p.status === 'failed' ? 'fail' :
-                                p.status === 'pending' ? 'pending' : 'pending'
-                              }>
-                                {qrStatusLabels[p.status] || p.status || 'N/A'}
-                              </StatusBadge>
+                                'pending'
+                              } label={
+                                p.status === 'paid' ? 'OK' :
+                                p.status === 'failed' ? 'Error' :
+                                'N/A'
+                              } />
                             </td>
                             <td className="px-4 py-3 text-text-muted">{p.created_at ? new Date(p.created_at).toLocaleString('vi-VN') : 'N/A'}</td>
                             <td className="px-4 py-3 text-text-muted">{p.paid_at ? new Date(p.paid_at).toLocaleString('vi-VN') : 'N/A'}</td>

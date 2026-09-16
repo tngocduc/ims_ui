@@ -279,7 +279,7 @@ function AdminTenantAdminsPage() {
                           <td className="px-4 py-3">{admin.auth_user.email || '—'}</td>
                           <td className="px-4 py-3">{admin.auth_user.first_name} {admin.auth_user.last_name}</td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={admin.tenant_admin.is_active ? 'pass' : 'fail'} />
+                            <StatusBadge status={admin.tenant_admin.is_active ? 'pass' : 'fail'} label={admin.tenant_admin.is_active ? 'OK' : 'Error'} />
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">

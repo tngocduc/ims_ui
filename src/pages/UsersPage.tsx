@@ -138,7 +138,7 @@ function UsersPage() {
                           <td className="px-4 py-3 font-medium text-text-primary">{user.name}</td>
                           <td className="px-4 py-3"><CodeBlock code={user.phone_number} lang="text" className="inline" /></td>
                           <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(user.balance))} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><StatusBadge status={user.is_active ? 'pass' : 'fail'} /></td>
+                          <td className="px-4 py-3"><StatusBadge status={user.is_active ? 'pass' : 'fail'} label={user.is_active ? 'OK' : 'Error'} /></td>
                           <td className="px-4 py-3 text-text-muted">{new Date(user.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">

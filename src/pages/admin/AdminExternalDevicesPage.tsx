@@ -274,7 +274,7 @@ function AdminExternalDevicesPage() {
                           <td className="px-4 py-3">{device.stats?.transaction_count || 0}</td>
                           <td className="px-4 py-3"><CodeBlock code={device.stats?.total_sales || '0'} lang="text" className="inline" /></td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={device.is_active ? 'pass' : 'fail'} />
+                            <StatusBadge status={device.is_active ? 'pass' : 'fail'} label={device.is_active ? 'OK' : 'Error'} />
                           </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(device.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">

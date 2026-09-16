@@ -169,6 +169,9 @@ function AdminDevicesPage() {
                               device.status === 'online' ? 'pass' :
                               device.status === 'offline' ? 'fail' :
                               device.status === 'maintenance' ? 'needs_review' : 'error'
+                            } label={
+                              device.status === 'online' ? 'OK' :
+                              device.status === 'offline' ? 'Error' : 'N/A'
                             } />
                           </td>
                           <td className="px-4 py-3 text-text-muted">{device.register_date ? new Date(device.register_date).toLocaleDateString('vi-VN') : '—'}</td>

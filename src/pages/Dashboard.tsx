@@ -300,7 +300,7 @@ function Dashboard() {
                       </td>
                       <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
                       <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
-                      <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} label={tx.is_success ? 'OK' : 'Error'} /></td>
                       <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
                     </tr>
                   ))}

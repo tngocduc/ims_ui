@@ -263,7 +263,7 @@ function RfidCardsPage() {
                             {String(card.extra_info?.label || card.extra_info?.name || '—')}
                           </td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={card.is_active ? 'pass' : 'fail'} />
+                            <StatusBadge status={card.is_active ? 'pass' : 'fail'} label={card.is_active ? 'OK' : 'Error'} />
                           </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(card.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">

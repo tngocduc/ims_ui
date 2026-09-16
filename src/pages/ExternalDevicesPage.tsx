@@ -223,7 +223,7 @@ function ExternalDevicesPage() {
                           <td className="px-4 py-3">{device.stats?.paid_transaction_count || 0}</td>
                           <td className="px-4 py-3"><CodeBlock code={device.stats?.total_sales || '0'} lang="text" className="inline" /></td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={device.is_active ? 'pass' : 'fail'} />
+                            <StatusBadge status={device.is_active ? 'pass' : 'fail'} label={device.is_active ? 'OK' : 'Error'} />
                           </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(device.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">
@@ -338,7 +338,7 @@ function ExternalDevicesPage() {
                             <td className="px-4 py-3"><CodeBlock code={tx.price} lang="text" className="inline" /></td>
                             <td className="px-4 py-3"><CodeBlock code={tx.pay_amount} lang="text" className="inline" /></td>
                             <td className="px-4 py-3">
-                              <StatusBadge status={tx.pay_status === 1 ? 'pass' : 'fail'} />
+                              <StatusBadge status={tx.pay_status === 1 ? 'pass' : 'fail'} label={tx.pay_status === 1 ? 'OK' : 'Error'} />
                             </td>
                             <td className="px-4 py-3 text-text-muted">{tx.temina_id || '—'}</td>
                             <td className="px-4 py-3 text-text-muted">{tx.create_at ? new Date(tx.create_at).toLocaleString('vi-VN') : '—'}</td>

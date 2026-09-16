@@ -304,7 +304,7 @@ function AdminTenantsPage() {
                               </Button>
                             </td>
                             <td className="px-4 py-3">
-                              <StatusBadge status={tenant.is_active ? 'pass' : 'fail'} />
+                              <StatusBadge status={tenant.is_active ? 'pass' : 'fail'} label={tenant.is_active ? 'OK' : 'Error'} />
                             </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(tenant.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">

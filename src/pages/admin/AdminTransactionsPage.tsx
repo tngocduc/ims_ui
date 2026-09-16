@@ -40,21 +40,21 @@ const refundStatusLabels: Record<string, string> = {
 
 function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; variant: 'pass' | 'fail' | 'pending' } {
   if (tx.is_success && tx.vend_status === 'success') {
-    return { label: 'Hoàn tất', variant: 'pass' }
+    return { label: 'OK', variant: 'pass' }
   }
   if (tx.vend_status === 'pending') {
-    return { label: 'Đã thanh toán, chờ trả hàng', variant: 'pending' }
+    return { label: 'N/A', variant: 'pending' }
   }
   if (tx.vend_status === 'failed' && tx.refund_status === 'required') {
-    return { label: 'Cần hoàn tiền', variant: 'fail' }
+    return { label: 'Error', variant: 'fail' }
   }
   if (tx.vend_status === 'timeout' && tx.refund_status === 'required') {
-    return { label: 'Cần hoàn tiền (timeout)', variant: 'fail' }
+    return { label: 'Error', variant: 'fail' }
   }
   if (tx.refund_status === 'refunded') {
-    return { label: 'Đã hoàn tiền', variant: 'pass' }
+    return { label: 'OK', variant: 'pass' }
   }
-  return { label: tx.is_success ? 'Thành công' : 'Thất bại', variant: tx.is_success ? 'pass' : 'fail' }
+  return { label: tx.is_success ? 'OK' : 'Error', variant: tx.is_success ? 'pass' : 'fail' }
 }
 
 function AdminTransactionsPage() {
@@ -258,29 +258,36 @@ function AdminTransactionsPage() {
                           <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
                           <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" className="inline" /></td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={tx.vend_status === 'success' ? 'pass' : tx.vend_status === 'pending' ? 'pending' : 'fail'}>
-                              {vendStatusLabels[tx.vend_status] || tx.vend_status}
-                            </StatusBadge>
+                            {(() => {
+                              const status = tx.vend_status
+                              if (!status || status === 'pending') {
+                                return <StatusBadge status="pending" label="N/A" />
+                              }
+                              if (status === 'success') {
+                                return <StatusBadge status="pass" label="OK" />
+                              }
+                              return <StatusBadge status="fail" label="Error" />
+                            })()}
                           </td>
                           <td className="px-4 py-3">
                             {(() => {
                               const status = tx.refund_status || 'none'
                               if (status === 'none' || !status) {
-                                return <StatusBadge status="pending">N/A</StatusBadge>
+                                return <StatusBadge status="pending" label="N/A" />
                               }
                               if (status === 'required' || status === 'failed') {
-                                return <StatusBadge status="fail">Cần hoàn tiền</StatusBadge>
+                                return <StatusBadge status="fail" label="Chưa hoàn" />
                               }
                               if (status === 'refunded') {
-                                return <StatusBadge status="pass">Đã hoàn tiền</StatusBadge>
+                                return <StatusBadge status="pass" label="Đã hoàn" />
                               }
-                              return <StatusBadge status="pending">{refundStatusLabels[status] || status}</StatusBadge>
+                              return <StatusBadge status="pending" label="N/A" />
                             })()}
                           </td>
                           <td className="px-4 py-3">
                             {(() => {
                               const { label, variant } = getTransactionStatusLabel(tx)
-                              return <StatusBadge status={variant}>{label}</StatusBadge>
+                              return <StatusBadge status={variant} label={label} />
                             })()}
                           </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
