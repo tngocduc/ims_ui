@@ -367,17 +367,6 @@ function TransactionsPage() {
                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
               />
             </div>
-            {viewMode === 'qr' && (
-              <div className="min-w-[200px]">
-                <label className="block text-xs font-medium text-text-muted mb-1.5">Tìm kiếm</label>
-                <Input
-                  placeholder="Transaction ID hoặc Order ID"
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-            )}
             <Button type="submit" disabled={loading} className="h-9">
               {loading ? 'Đang tải...' : 'Áp dụng bộ lọc'}
             </Button>
@@ -405,22 +394,20 @@ function TransactionsPage() {
                     <tr className="border-b border-border-subtle bg-bg-base">
                       {viewMode === 'device' ? (
                         <>
-                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số TX</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
-                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Người dùng</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số TX</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Món hàng</th>
-                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Lý do</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái thanh toán</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái trả hàng</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái hoàn tiền</th>
-                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
-                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thời gian</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Ngày mua</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Lý do</th>
                         </>
                       ) : (
                         <>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Transaction ID</th>
-                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Provider Order ID</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thiết bị</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
@@ -435,7 +422,7 @@ function TransactionsPage() {
                     {viewMode === 'device' ? (
                       transactions.length === 0 ? (
                         <tr>
-                          <td colSpan={11} className="px-4 py-12 text-center text-text-muted">
+                          <td colSpan={10} className="px-4 py-12 text-center text-text-muted">
                             <Server className="h-10 w-10 mx-auto mb-3 opacity-30" />
                             <p>Không tìm thấy giao dịch</p>
                           </td>
@@ -443,41 +430,40 @@ function TransactionsPage() {
                       ) : (
 transactions.map((tx) => (
                             <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                              <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3">{tx.user_info?.provider_payment_id || <span className="text-text-muted">—</span>}</td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.device_uuid || 'N/A'} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.tx_number || 'N/A'} lang="text" className="inline" /></td>
                               <td className="px-4 py-3">
                                 <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
-                                  {paymentMethodLabels[tx.payment_method] || tx.payment_method}
+                                  {paymentMethodLabels[tx.payment_method] || tx.payment_method || 'N/A'}
                                 </span>
                               </td>
-                              <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3">
-                                <StatusBadge status={tx.vend_status === 'success' ? 'pass' : tx.vend_status === 'pending' ? 'pending' : 'fail'}>
-                                  {vendStatusLabels[tx.vend_status] || tx.vend_status}
-                                </StatusBadge>
-                              </td>
-                              <td className="px-4 py-3">
-                                <StatusBadge status={tx.refund_status === 'refunded' ? 'pass' : tx.refund_status === 'required' ? 'fail' : 'pending'}>
-                                  {refundStatusLabels[tx.refund_status] || tx.refund_status}
-                                </StatusBadge>
-                              </td>
+                              <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price || '0'))} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.item || 'N/A'} lang="text" className="inline" /></td>
                               <td className="px-4 py-3">
                                 {(() => {
                                   const { label, variant } = getTransactionStatusLabel(tx)
                                   return <StatusBadge status={variant}>{label}</StatusBadge>
                                 })()}
                               </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={tx.vend_status === 'success' ? 'pass' : tx.vend_status === 'pending' ? 'pending' : 'fail'}>
+                                  {vendStatusLabels[tx.vend_status] || tx.vend_status || 'N/A'}
+                                </StatusBadge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={tx.refund_status === 'refunded' ? 'pass' : tx.refund_status === 'required' ? 'fail' : 'pending'}>
+                                  {refundStatusLabels[tx.refund_status] || tx.refund_status || 'N/A'}
+                                </StatusBadge>
+                              </td>
                               <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
+                              <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || 'N/A'} lang="text" className="inline" /></td>
                             </tr>
                           ))
                       )
                     ) : (
                       qrPayments.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="px-4 py-12 text-center text-text-muted">
+                          <td colSpan={7} className="px-4 py-12 text-center text-text-muted">
                             <QrCode className="h-10 w-10 mx-auto mb-3 opacity-30" />
                             <p>Không tìm thấy giao dịch QR</p>
                           </td>
@@ -485,13 +471,12 @@ transactions.map((tx) => (
                       ) : (
                         qrPayments.map((p) => (
                           <tr key={p.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                            <td className="px-4 py-3"><CodeBlock code={p.transaction_id} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={p.provider_order_id} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={p.device_uuid} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(p.amount))} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={p.transaction_id || 'N/A'} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={p.device_uuid || 'N/A'} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(p.amount || '0'))} lang="text" className="inline" /></td>
                             <td className="px-4 py-3">
                               <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
-                                {p.payment_method}
+                                {p.payment_method || 'N/A'}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -499,10 +484,12 @@ transactions.map((tx) => (
                                 p.status === 'paid' ? 'pass' :
                                 p.status === 'failed' ? 'fail' :
                                 p.status === 'pending' ? 'pending' : 'pending'
-                              } />
+                              }>
+                                {qrStatusLabels[p.status] || p.status || 'N/A'}
+                              </StatusBadge>
                             </td>
-                            <td className="px-4 py-3 text-text-muted">{new Date(p.created_at).toLocaleString('vi-VN')}</td>
-                            <td className="px-4 py-3 text-text-muted">{p.paid_at ? new Date(p.paid_at).toLocaleString('vi-VN') : <span className="text-text-muted">—</span>}</td>
+                            <td className="px-4 py-3 text-text-muted">{p.created_at ? new Date(p.created_at).toLocaleString('vi-VN') : 'N/A'}</td>
+                            <td className="px-4 py-3 text-text-muted">{p.paid_at ? new Date(p.paid_at).toLocaleString('vi-VN') : 'N/A'}</td>
                           </tr>
                         ))
                       )
