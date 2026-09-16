@@ -41,10 +41,10 @@ const vendStatusLabels: Record<string, string> = {
 }
 
 const refundStatusLabels: Record<string, string> = {
-  none: 'Không cần',
+  none: 'N/A',
   required: 'Cần hoàn tiền',
   refunded: 'Đã hoàn tiền',
-  failed: 'Hoàn tiền thất bại',
+  failed: 'Cần hoàn tiền',
 }
 
 function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; variant: 'pass' | 'fail' | 'pending' } {
@@ -451,9 +451,19 @@ transactions.map((tx) => (
                                 </StatusBadge>
                               </td>
                               <td className="px-4 py-3">
-                                <StatusBadge status={tx.refund_status === 'refunded' ? 'pass' : tx.refund_status === 'required' ? 'fail' : 'pending'}>
-                                  {refundStatusLabels[tx.refund_status] || tx.refund_status || 'N/A'}
-                                </StatusBadge>
+                                {(() => {
+                                  const status = tx.refund_status || 'none'
+                                  if (status === 'none' || !status) {
+                                    return <StatusBadge status="pending">N/A</StatusBadge>
+                                  }
+                                  if (status === 'required' || status === 'failed') {
+                                    return <StatusBadge status="fail">Cần hoàn tiền</StatusBadge>
+                                  }
+                                  if (status === 'refunded') {
+                                    return <StatusBadge status="pass">Đã hoàn tiền</StatusBadge>
+                                  }
+                                  return <StatusBadge status="pending">{refundStatusLabels[status] || status}</StatusBadge>
+                                })()}
                               </td>
                               <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
                               <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || 'N/A'} lang="text" className="inline" /></td>

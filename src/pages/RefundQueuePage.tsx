@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast'
 const refundStatusLabels: Record<string, string> = {
   required: 'Cần hoàn tiền',
   refunded: 'Đã hoàn tiền',
-  failed: 'Hoàn tiền thất bại',
+  failed: 'Cần hoàn tiền',
 }
 
 const vendStatusLabels: Record<string, string> = {
@@ -159,7 +159,7 @@ function RefundQueuePage() {
               options={[
                 { value: 'required', label: 'Cần hoàn tiền' },
                 { value: 'refunded', label: 'Đã hoàn tiền' },
-                { value: 'failed', label: 'Hoàn tiền thất bại' },
+                { value: 'failed', label: 'Cần hoàn tiền' },
               ]}
             />
             <div className="min-w-[160px]">
@@ -242,9 +242,19 @@ function RefundQueuePage() {
                             </StatusBadge>
                           </td>
                           <td className="px-4 py-3">
-                            <StatusBadge status={tx.refund_status === 'refunded' ? 'pass' : tx.refund_status === 'required' ? 'fail' : 'fail'}>
-                              {refundStatusLabels[tx.refund_status] || tx.refund_status}
-                            </StatusBadge>
+                            {(() => {
+                              const status = tx.refund_status || 'none'
+                              if (status === 'none' || !status) {
+                                return <StatusBadge status="pending">N/A</StatusBadge>
+                              }
+                              if (status === 'required' || status === 'failed') {
+                                return <StatusBadge status="fail">Cần hoàn tiền</StatusBadge>
+                              }
+                              if (status === 'refunded') {
+                                return <StatusBadge status="pass">Đã hoàn tiền</StatusBadge>
+                              }
+                              return <StatusBadge status="pending">{refundStatusLabels[status] || status}</StatusBadge>
+                            })()}
                           </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
                           <td className="px-4 py-3">
