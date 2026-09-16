@@ -11,6 +11,7 @@ import ReportsPage from '@/pages/ReportsPage'
 import RfidCardsPage from '@/pages/RfidCardsPage'
 import ExternalDevicesPage from '@/pages/ExternalDevicesPage'
 import VietqrConfigPage from '@/pages/VietqrConfigPage'
+import RefundQueuePage from '@/pages/RefundQueuePage'
 import AdminDashboard from '@/pages/admin/AdminDashboard'
 import AdminTenantsPage from '@/pages/admin/AdminTenantsPage'
 import AdminTenantAdminsPage from '@/pages/admin/AdminTenantAdminsPage'
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route path="/devices" element={<DevicesPage />} />
         <Route path="/external-devices" element={<ExternalDevicesPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/refund-queue" element={<RefundQueuePage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/vietqr-config" element={<VietqrConfigPage />} />
       </Route>

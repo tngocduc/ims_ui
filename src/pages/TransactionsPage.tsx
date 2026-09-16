@@ -5,9 +5,9 @@ import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, SectionLabel } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Server, CreditCard, QrCode } from 'lucide-react'
+import { Server, CreditCard, QrCode, RotateCcw } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-import { deviceApi, qrPaymentApi, QrPayment } from '@/lib/api'
+import { deviceApi, qrPaymentApi, DeviceTransaction, QrPayment } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 
 interface Device {
@@ -15,25 +15,6 @@ interface Device {
   type_name: string
   status: string
 }
-
-interface Transaction {
-  id: number
-  tx_number: string
-  device_uuid: string
-  user_id: number | null
-  user_info: { name: string } | null
-  payment_method: string
-  payment_source_id: string
-  price: string
-  item: string
-  reason: string
-  is_success: boolean
-  is_sniff: boolean
-  note: string | null
-  time: string
-}
-
-type ViewMode = 'device' | 'qr'
 
 const paymentMethodLabels: Record<string, string> = {
   cash: 'Tiền mặt',
@@ -52,10 +33,43 @@ const qrStatusLabels: Record<string, string> = {
   refunded: 'Đã hoàn tiền',
 }
 
+const vendStatusLabels: Record<string, string> = {
+  pending: 'Đang chờ trả hàng',
+  success: 'Đã trả hàng',
+  failed: 'Trả hàng thất bại',
+  timeout: 'Hết thời gian chờ',
+}
+
+const refundStatusLabels: Record<string, string> = {
+  none: 'Không cần',
+  required: 'Cần hoàn tiền',
+  refunded: 'Đã hoàn tiền',
+  failed: 'Hoàn tiền thất bại',
+}
+
+function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; variant: 'pass' | 'fail' | 'pending' } {
+  if (tx.is_success && tx.vend_status === 'success') {
+    return { label: 'Hoàn tất', variant: 'pass' }
+  }
+  if (tx.vend_status === 'pending') {
+    return { label: 'Đã thanh toán, chờ trả hàng', variant: 'pending' }
+  }
+  if (tx.vend_status === 'failed' && tx.refund_status === 'required') {
+    return { label: 'Cần hoàn tiền', variant: 'fail' }
+  }
+  if (tx.vend_status === 'timeout' && tx.refund_status === 'required') {
+    return { label: 'Cần hoàn tiền (timeout)', variant: 'fail' }
+  }
+  if (tx.refund_status === 'refunded') {
+    return { label: 'Đã hoàn tiền', variant: 'pass' }
+  }
+  return { label: tx.is_success ? 'Thành công' : 'Thất bại', variant: tx.is_success ? 'pass' : 'fail' }
+}
+
 function TransactionsPage() {
   const { user } = useAuth()
   const [viewMode, setViewMode] = useState<ViewMode>('device')
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactions, setTransactions] = useState<DeviceTransaction[]>([])
   const [qrPayments, setQrPayments] = useState<QrPayment[]>([])
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,6 +83,8 @@ function TransactionsPage() {
     dateTo: '',
     status: '',
     search: '',
+    vendStatus: '',
+    refundStatus: '',
   })
 
   const fetchDevices = async () => {
@@ -117,6 +133,8 @@ function TransactionsPage() {
       if (filters.paymentMethod) params.payment_method = filters.paymentMethod
       if (filters.dateFrom) params.date_from = filters.dateFrom
       if (filters.dateTo) params.date_to = filters.dateTo
+      if (filters.vendStatus) params.vend_status = filters.vendStatus
+      if (filters.refundStatus) params.refund_status = filters.refundStatus
 
       const responses = await Promise.all(
         deviceUuids.map(uuid => deviceApi.listTransactions(uuid, params).catch(err => {
@@ -271,19 +289,67 @@ function TransactionsPage() {
                 { value: 'other', label: 'Khác' },
               ]}
             />
+            {viewMode === 'device' && (
+              <>
+                <Select
+                  value={filters.vendStatus}
+                  onChange={(e) => handleFilterChange('vendStatus', e.target.value)}
+                  options={[
+                    { value: '', label: 'Tất cả trạng thái trả hàng' },
+                    { value: 'pending', label: 'Đang chờ' },
+                    { value: 'success', label: 'Thành công' },
+                    { value: 'failed', label: 'Thất bại' },
+                    { value: 'timeout', label: 'Timeout' },
+                  ]}
+                />
+                <Select
+                  value={filters.refundStatus}
+                  onChange={(e) => handleFilterChange('refundStatus', e.target.value)}
+                  options={[
+                    { value: '', label: 'Tất cả trạng thái hoàn tiền' },
+                    { value: 'none', label: 'Không cần' },
+                    { value: 'required', label: 'Cần hoàn tiền' },
+                    { value: 'refunded', label: 'Đã hoàn tiền' },
+                    { value: 'failed', label: 'Hoàn tiền thất bại' },
+                  ]}
+                />
+              </>
+            )}
             {viewMode === 'qr' && (
-              <Select
-                value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                options={[
-                  { value: '', label: 'Tất cả trạng thái' },
-                  { value: 'pending', label: 'Đang chờ' },
-                  { value: 'paid', label: 'Đã thanh toán' },
-                  { value: 'failed', label: 'Thất bại' },
-                  { value: 'expired', label: 'Hết hạn' },
-                  { value: 'refunded', label: 'Đã hoàn tiền' },
-                ]}
-              />
+              <>
+                <Select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  options={[
+                    { value: '', label: 'Tất cả trạng thái' },
+                    { value: 'pending', label: 'Đang chờ' },
+                    { value: 'paid', label: 'Đã thanh toán' },
+                    { value: 'failed', label: 'Thất bại' },
+                    { value: 'expired', label: 'Hết hạn' },
+                    { value: 'refunded', label: 'Đã hoàn tiền' },
+                  ]}
+                />
+                <div className="min-w-[200px]">
+                  <label className="block text-xs font-medium text-text-muted mb-1.5">Tìm kiếm</label>
+                  <Input
+                    placeholder="Transaction ID hoặc Order ID"
+                    value={filters.search}
+                    onChange={(e) => handleFilterChange('search', e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+              </>
+            )}
+            {viewMode === 'device' && (
+              <div className="min-w-[200px]">
+                <label className="block text-xs font-medium text-text-muted mb-1.5">Tìm kiếm</label>
+                <Input
+                  placeholder="Số TX hoặc Provider Payment ID"
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
             )}
             <div className="min-w-[160px]">
               <label className="block text-xs font-medium text-text-muted mb-1.5">Từ ngày</label>
@@ -345,6 +411,9 @@ function TransactionsPage() {
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Món hàng</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Lý do</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái trả hàng</th>
+                          <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái hoàn tiền</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
                           <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thời gian</th>
                         </>
@@ -366,28 +435,44 @@ function TransactionsPage() {
                     {viewMode === 'device' ? (
                       transactions.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="px-4 py-12 text-center text-text-muted">
+                          <td colSpan={11} className="px-4 py-12 text-center text-text-muted">
                             <Server className="h-10 w-10 mx-auto mb-3 opacity-30" />
                             <p>Không tìm thấy giao dịch</p>
                           </td>
                         </tr>
                       ) : (
-                        transactions.map((tx) => (
-                          <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                            <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3">{tx.user_info?.name || <span className="text-text-muted">—</span>}</td>
-                            <td className="px-4 py-3">
-                              <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
-                                {paymentMethodLabels[tx.payment_method] || tx.payment_method}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} /></td>
-                            <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
-                          </tr>
-                        ))
+transactions.map((tx) => (
+                            <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
+                              <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3">{tx.user_info?.provider_payment_id || <span className="text-text-muted">—</span>}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
+                                  {paymentMethodLabels[tx.payment_method] || tx.payment_method}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={tx.vend_status === 'success' ? 'pass' : tx.vend_status === 'pending' ? 'pending' : 'fail'}>
+                                  {vendStatusLabels[tx.vend_status] || tx.vend_status}
+                                </StatusBadge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <StatusBadge status={tx.refund_status === 'refunded' ? 'pass' : tx.refund_status === 'required' ? 'fail' : 'pending'}>
+                                  {refundStatusLabels[tx.refund_status] || tx.refund_status}
+                                </StatusBadge>
+                              </td>
+                              <td className="px-4 py-3">
+                                {(() => {
+                                  const { label, variant } = getTransactionStatusLabel(tx)
+                                  return <StatusBadge status={variant}>{label}</StatusBadge>
+                                })()}
+                              </td>
+                              <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
+                            </tr>
+                          ))
                       )
                     ) : (
                       qrPayments.length === 0 ? (

@@ -380,6 +380,83 @@ export const reportApi = {
     api.get<{ status: string; data: unknown }>(`/core/tenants/${tenantId}/reports/sales`, { params }).then(extractData),
 }
 
+export interface DeviceTransaction {
+  id: number
+  tx_number: string
+  device_uuid: string
+  time: string
+  transaction_date: string
+  payment_method: string
+  payment_source_id: string
+  user_id: number | null
+  user_info: {
+    provider_order_id: string
+    provider_payment_id: string
+    amount: string
+  } | null
+  item: string
+  price: string
+  reason: string
+  is_success: boolean
+  is_sniff: boolean
+  note: string | null
+  vend_status: 'pending' | 'success' | 'failed' | 'timeout'
+  refund_status: 'none' | 'required' | 'refunded' | 'failed'
+}
+
+export interface PaginatedDeviceTransactions {
+  items: DeviceTransaction[]
+  count: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface RefundTransaction {
+  id: number
+  tx_number: string
+  device_uuid: string
+  time: string
+  payment_method: string
+  payment_source_id: string
+  item: string
+  price: string
+  reason: string
+  note: string
+  is_success: boolean
+  vend_status: 'failed' | 'timeout'
+  refund_status: 'required' | 'refunded' | 'failed'
+}
+
+export interface PaginatedRefunds {
+  items: RefundTransaction[]
+  count: number
+  pageIndex: number
+  pageSize: number
+  totalPages: number
+}
+
+export interface MarkRefundedRequest {
+  note: string
+  tenant_id?: number
+}
+
+export interface MarkRefundedResponse {
+  id: number
+  tx_number: string
+  device_uuid: string
+  time: string
+  payment_method: string
+  payment_source_id: string
+  item: string
+  price: string
+  reason: string
+  note: string
+  is_success: boolean
+  vend_status: 'failed' | 'timeout'
+  refund_status: 'refunded'
+}
+
 export interface QrPayment {
   id: number
   transaction_id: string
@@ -387,7 +464,7 @@ export interface QrPayment {
   tenant_id: number
   device_uuid: string
   amount: string
-  status: string
+  status: 'pending' | 'paid' | 'failed' | 'cancelled' | 'expired' | 'refunded'
   payment_method: string
   created_at: string
   updated_at: string
@@ -409,6 +486,13 @@ export const qrPaymentApi = {
     api.get<{ status: string; data: QrPayment }>(`/core/tenant/qr-payments/${transactionId}`, { params: tenantId ? { tenant_id: tenantId } : {} }).then(extractData),
   stats: (tenantId: number) =>
     api.get<{ status: string; data: unknown }>('/core/tenant/qr-payments/stats', { params: { tenant_id: tenantId } }).then(extractData),
+}
+
+export const refundApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get<{ status: string; data: PaginatedRefunds }>('/core/tenant/refunds', { params: mapPaginationParams(params) }).then(extractData),
+  markRefunded: (txNumber: string, data: MarkRefundedRequest) =>
+    api.post<{ status: string; data: MarkRefundedResponse }>(`/core/tenant/refunds/${txNumber}/mark-refunded`, data).then(extractData),
 }
 
 export const balanceApi = {

@@ -8,19 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
 import { Search, Building2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
-
-interface Transaction {
-  id: number
-  tx_number: string
-  tenant: { name: string }
-  device_uuid: string
-  user_info: { name: string } | null
-  payment_method: string
-  price: string
-  item: string
-  is_success: boolean
-  time: string
-}
+import { DeviceTransaction } from '@/lib/api'
 
 interface TenantOption {
   id: number
@@ -36,9 +24,42 @@ const paymentMethodLabels: Record<string, string> = {
   other: 'Khác',
 }
 
+const vendStatusLabels: Record<string, string> = {
+  pending: 'Đang chờ trả hàng',
+  success: 'Đã trả hàng',
+  failed: 'Trả hàng thất bại',
+  timeout: 'Hết thời gian chờ',
+}
+
+const refundStatusLabels: Record<string, string> = {
+  none: 'Không cần',
+  required: 'Cần hoàn tiền',
+  refunded: 'Đã hoàn tiền',
+  failed: 'Hoàn tiền thất bại',
+}
+
+function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; variant: 'pass' | 'fail' | 'pending' } {
+  if (tx.is_success && tx.vend_status === 'success') {
+    return { label: 'Hoàn tất', variant: 'pass' }
+  }
+  if (tx.vend_status === 'pending') {
+    return { label: 'Đã thanh toán, chờ trả hàng', variant: 'pending' }
+  }
+  if (tx.vend_status === 'failed' && tx.refund_status === 'required') {
+    return { label: 'Cần hoàn tiền', variant: 'fail' }
+  }
+  if (tx.vend_status === 'timeout' && tx.refund_status === 'required') {
+    return { label: 'Cần hoàn tiền (timeout)', variant: 'fail' }
+  }
+  if (tx.refund_status === 'refunded') {
+    return { label: 'Đã hoàn tiền', variant: 'pass' }
+  }
+  return { label: tx.is_success ? 'Thành công' : 'Thất bại', variant: tx.is_success ? 'pass' : 'fail' }
+}
+
 function AdminTransactionsPage() {
   const [tenants, setTenants] = useState<TenantOption[]>([])
-  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [transactions, setTransactions] = useState<DeviceTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [pagination, setPagination] = useState({ pageIndex: 1, pageSize: 20, total: 0, totalPages: 0 })
@@ -48,6 +69,8 @@ function AdminTransactionsPage() {
     paymentMethod: '',
     dateFrom: '',
     dateTo: '',
+    vendStatus: '',
+    refundStatus: '',
   })
 
   useEffect(() => {
@@ -141,6 +164,28 @@ function AdminTransactionsPage() {
                 { value: 'other', label: 'Khác' },
               ]}
             />
+            <Select
+              value={filters.vendStatus}
+              onChange={(e) => handleFilterChange('vendStatus', e.target.value)}
+              options={[
+                { value: '', label: 'Tất cả trạng thái trả hàng' },
+                { value: 'pending', label: 'Đang chờ' },
+                { value: 'success', label: 'Thành công' },
+                { value: 'failed', label: 'Thất bại' },
+                { value: 'timeout', label: 'Timeout' },
+              ]}
+            />
+            <Select
+              value={filters.refundStatus}
+              onChange={(e) => handleFilterChange('refundStatus', e.target.value)}
+              options={[
+                { value: '', label: 'Tất cả trạng thái hoàn tiền' },
+                { value: 'none', label: 'Không cần' },
+                { value: 'required', label: 'Cần hoàn tiền' },
+                { value: 'refunded', label: 'Đã hoàn tiền' },
+                { value: 'failed', label: 'Hoàn tiền thất bại' },
+              ]}
+            />
             <Input
               type="date"
               placeholder="Từ"
@@ -182,6 +227,9 @@ function AdminTransactionsPage() {
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Phương thức</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Số tiền</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Món hàng</th>
+                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Lý do</th>
+                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái trả hàng</th>
+                      <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái hoàn tiền</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Trạng thái</th>
                       <th className="px-4 py-3 text-left text-text-muted uppercase tracking-wider">Thời gian</th>
                     </tr>
@@ -189,7 +237,7 @@ function AdminTransactionsPage() {
                   <tbody>
                     {transactions.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-4 py-12 text-center text-text-muted">
+                        <td colSpan={12} className="px-4 py-12 text-center text-text-muted">
                           <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
                           <p>Không tìm thấy giao dịch</p>
                         </td>
@@ -200,7 +248,7 @@ function AdminTransactionsPage() {
                           <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
                           <td className="px-4 py-3">{tx.tenant?.name || 'N/A'}</td>
                           <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3">{tx.user_info?.name || <span className="text-text-muted">—</span>}</td>
+                          <td className="px-4 py-3">{tx.user_info?.provider_payment_id || <span className="text-text-muted">—</span>}</td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
                               {paymentMethodLabels[tx.payment_method] || tx.payment_method}
@@ -208,7 +256,23 @@ function AdminTransactionsPage() {
                           </td>
                           <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
                           <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><StatusBadge status={tx.is_success ? 'pass' : 'fail'} /></td>
+                          <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3">
+                            <StatusBadge status={tx.vend_status === 'success' ? 'pass' : tx.vend_status === 'pending' ? 'pending' : 'fail'}>
+                              {vendStatusLabels[tx.vend_status] || tx.vend_status}
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <StatusBadge status={tx.refund_status === 'refunded' ? 'pass' : tx.refund_status === 'required' ? 'fail' : 'pending'}>
+                              {refundStatusLabels[tx.refund_status] || tx.refund_status}
+                            </StatusBadge>
+                          </td>
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const { label, variant } = getTransactionStatusLabel(tx)
+                              return <StatusBadge status={variant}>{label}</StatusBadge>
+                            })()}
+                          </td>
                           <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
                         </tr>
                       ))
