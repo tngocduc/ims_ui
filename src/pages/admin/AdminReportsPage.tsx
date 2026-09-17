@@ -246,7 +246,7 @@ function AdminReportsPage() {
                     Object.entries(summary.byTenant).map(([tenant, amount]) => (
                       <tr key={tenant} className="border-b border-border-subtle/50">
                         <td className="px-4 py-3">{tenant}</td>
-                        <td className="px-4 py-3"><CodeBlock code={formatCurrency(amount)} lang="text" className="inline" /></td>
+                        <td className="px-4 py-3"><CodeBlock code={formatCurrency(amount)} lang="text" inline /></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 h-2 bg-bg-base rounded-full overflow-hidden">
@@ -255,7 +255,7 @@ function AdminReportsPage() {
                                 style={{ width: `${summary.totalSales > 0 ? (amount / summary.totalSales * 100) : 0}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs text-text-muted font-mono w-16 text-right">
+                            <span className="text-xs text-text-muted font-mono min-w-[5rem] flex-shrink-0 text-right">
                               {summary.totalSales > 0 ? ((amount / summary.totalSales * 100).toFixed(1)) : 0}%
                             </span>
                           </div>
@@ -295,7 +295,7 @@ function AdminReportsPage() {
                     Object.entries(summary.byPaymentMethod).map(([method, amount]) => (
                       <tr key={method} className="border-b border-border-subtle/50">
                         <td className="px-4 py-3">{method}</td>
-                        <td className="px-4 py-3"><CodeBlock code={formatCurrency(amount)} lang="text" className="inline" /></td>
+                        <td className="px-4 py-3"><CodeBlock code={formatCurrency(amount)} lang="text" inline /></td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 h-2 bg-bg-base rounded-full overflow-hidden">
@@ -304,7 +304,7 @@ function AdminReportsPage() {
                                 style={{ width: `${summary.totalSales > 0 ? (amount / summary.totalSales * 100) : 0}%` }}
                               ></div>
                             </div>
-                            <span className="text-xs text-text-muted font-mono w-16 text-right">
+                            <span className="text-xs text-text-muted font-mono min-w-[5rem] flex-shrink-0 text-right">
                               {summary.totalSales > 0 ? ((amount / summary.totalSales * 100).toFixed(1)) : 0}%
                             </span>
                           </div>
@@ -347,10 +347,10 @@ function AdminReportsPage() {
                   reportData.map((item, index) => (
                     <tr key={index} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
                       <td className="px-4 py-3">{item.tenant?.name || 'Unknown'}</td>
-                      <td className="px-4 py-3"><CodeBlock code={item.device_uuid} lang="text" className="inline" /></td>
+                      <td className="px-4 py-3"><CodeBlock code={item.device_uuid} lang="text" inline /></td>
                       <td className="px-4 py-3">{item.payment_method}</td>
                       <td className="px-4 py-3">{item.transaction_count}</td>
-                      <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(item.total_sales))} lang="text" className="inline" /></td>
+                      <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(item.total_sales))} lang="text" inline /></td>
                     </tr>
                   ))
                 )}

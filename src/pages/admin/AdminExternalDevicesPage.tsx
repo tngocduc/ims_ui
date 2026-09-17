@@ -267,12 +267,12 @@ function AdminExternalDevicesPage() {
                     ) : (
                       devices.map((device) => (
                         <tr key={device.device_sn} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={device.device_sn} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={device.device_sn} lang="text" inline /></td>
                           <td className="px-4 py-3">Tenant #{device.tenant_id}</td>
                           <td className="px-4 py-3 font-medium text-text-primary">{device.name || '—'}</td>
                           <td className="px-4 py-3 text-text-muted">{device.location || '—'}</td>
                           <td className="px-4 py-3">{device.stats?.transaction_count || 0}</td>
-                          <td className="px-4 py-3"><CodeBlock code={device.stats?.total_sales || '0'} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={device.stats?.total_sales || '0'} lang="text" inline /></td>
                           <td className="px-4 py-3">
                             <StatusBadge status={device.is_active ? 'pass' : 'fail'} label={device.is_active ? 'OK' : 'Error'} />
                           </td>

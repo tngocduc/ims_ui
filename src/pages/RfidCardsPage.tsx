@@ -257,8 +257,8 @@ function RfidCardsPage() {
                     ) : (
                       cards.map((card) => (
                         <tr key={card.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={String(card.id)} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3 font-medium text-text-primary"><CodeBlock code={card.card_id} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={String(card.id)} lang="text" inline /></td>
+                          <td className="px-4 py-3 font-medium text-text-primary"><CodeBlock code={card.card_id} lang="text" inline /></td>
                           <td className="px-4 py-3 text-text-muted">
                             {String(card.extra_info?.label || card.extra_info?.name || '—')}
                           </td>

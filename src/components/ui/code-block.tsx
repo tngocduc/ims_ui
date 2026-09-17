@@ -9,9 +9,10 @@ interface CodeBlockProps {
   className?: string
   showLineNumbers?: boolean
   skipHighlighting?: boolean
+  inline?: boolean
 }
 
-export function CodeBlock({ code, lang = 'json', className, showLineNumbers = false, skipHighlighting }: CodeBlockProps) {
+export function CodeBlock({ code, lang = 'json', className, showLineNumbers = false, skipHighlighting, inline }: CodeBlockProps) {
   const [html, setHtml] = React.useState('')
   const [copied, setCopied] = React.useState(false)
 
@@ -19,7 +20,7 @@ export function CodeBlock({ code, lang = 'json', className, showLineNumbers = fa
   const shouldSkipHighlighting = skipHighlighting ?? !code.includes('\n')
 
   React.useEffect(() => {
-    if (shouldSkipHighlighting) {
+    if (shouldSkipHighlighting || inline) {
       return
     }
     let mounted = true
@@ -33,12 +34,20 @@ export function CodeBlock({ code, lang = 'json', className, showLineNumbers = fa
       }
     })
     return () => { mounted = false }
-  }, [code, lang, showLineNumbers, skipHighlighting])
+  }, [code, lang, showLineNumbers, skipHighlighting, inline])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(code)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (inline) {
+    return (
+      <code className={cn('font-mono text-sm text-text-primary', className)}>
+        {code}
+      </code>
+    )
   }
 
   if (!html || skipHighlighting) {

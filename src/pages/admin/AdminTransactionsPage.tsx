@@ -245,18 +245,18 @@ function AdminTransactionsPage() {
                     ) : (
                       transactions.map((tx) => (
                         <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={tx.tx_number} lang="text" inline /></td>
                           <td className="px-4 py-3">{tx.tenant?.name || 'N/A'}</td>
-                          <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={tx.device_uuid} lang="text" inline /></td>
                           <td className="px-4 py-3">{tx.user_info?.provider_payment_id || <span className="text-text-muted">—</span>}</td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
                               {paymentMethodLabels[tx.payment_method] || tx.payment_method}
                             </span>
                           </td>
-                          <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price))} lang="text" inline /></td>
+                          <td className="px-4 py-3"><CodeBlock code={tx.item} lang="text" inline /></td>
+                          <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || '—'} lang="text" inline /></td>
                           <td className="px-4 py-3">
                             {(() => {
                               const status = tx.vend_status

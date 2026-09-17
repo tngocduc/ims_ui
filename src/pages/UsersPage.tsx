@@ -134,10 +134,10 @@ function UsersPage() {
                     ) : (
                       users.map((user) => (
                         <tr key={user.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={String(user.id)} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={String(user.id)} lang="text" inline /></td>
                           <td className="px-4 py-3 font-medium text-text-primary">{user.name}</td>
-                          <td className="px-4 py-3"><CodeBlock code={user.phone_number} lang="text" className="inline" /></td>
-                          <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(user.balance))} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={user.phone_number} lang="text" inline /></td>
+                          <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(user.balance))} lang="text" inline /></td>
                           <td className="px-4 py-3"><StatusBadge status={user.is_active ? 'pass' : 'fail'} label={user.is_active ? 'OK' : 'Error'} /></td>
                           <td className="px-4 py-3 text-text-muted">{new Date(user.created_at).toLocaleDateString('vi-VN')}</td>
                           <td className="px-4 py-3">

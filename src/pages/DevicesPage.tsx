@@ -133,9 +133,9 @@ function DevicesPage() {
                     ) : (
                       devices.map((device) => (
                         <tr key={device.uuid} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={device.uuid} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={device.uuid} lang="text" inline /></td>
                           <td className="px-4 py-3">{device.type_name}</td>
-                          <td className="px-4 py-3"><CodeBlock code={device.firmware} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={device.firmware} lang="text" inline /></td>
                           <td className="px-4 py-3">
                             <StatusBadge status={
                               device.status === 'online' ? 'pass' :

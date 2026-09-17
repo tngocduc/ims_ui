@@ -273,7 +273,7 @@ function AdminTenantAdminsPage() {
                     ) : (
                       admins.map((admin) => (
                         <tr key={admin.auth_user.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                          <td className="px-4 py-3"><CodeBlock code={String(admin.auth_user.id)} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={String(admin.auth_user.id)} lang="text" inline /></td>
                           <td className="px-4 py-3">{admin.auth_user.tenant?.name || 'N/A'}</td>
                           <td className="px-4 py-3 font-medium text-text-primary">{admin.auth_user.username}</td>
                           <td className="px-4 py-3">{admin.auth_user.email || '—'}</td>

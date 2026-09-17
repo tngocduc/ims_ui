@@ -408,15 +408,15 @@ function TransactionsPage() {
                       ) : (
 transactions.map((tx) => (
                             <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                              <td className="px-4 py-3"><CodeBlock code={tx.device_uuid || 'N/A'} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3"><CodeBlock code={tx.tx_number || 'N/A'} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.device_uuid || 'N/A'} lang="text" inline /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.tx_number || 'N/A'} lang="text" inline /></td>
                               <td className="px-4 py-3">
                                 <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
                                   {paymentMethodLabels[tx.payment_method] || tx.payment_method || 'N/A'}
                                 </span>
                               </td>
-                              <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price || '0'))} lang="text" className="inline" /></td>
-                              <td className="px-4 py-3"><CodeBlock code={tx.item || 'N/A'} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(tx.price || '0'))} lang="text" inline /></td>
+                              <td className="px-4 py-3"><CodeBlock code={tx.item || 'N/A'} lang="text" inline /></td>
                               <td className="px-4 py-3">
                                 {(() => {
                                   const { label, variant } = getTransactionStatusLabel(tx)
@@ -451,7 +451,7 @@ transactions.map((tx) => (
                                 })()}
                               </td>
                               <td className="px-4 py-3 text-text-muted">{new Date(tx.time).toLocaleString('vi-VN')}</td>
-                              <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || 'N/A'} lang="text" className="inline" /></td>
+                              <td className="px-4 py-3 text-text-muted"><CodeBlock code={tx.reason || 'N/A'} lang="text" inline /></td>
                             </tr>
                           ))
                       )
@@ -466,9 +466,9 @@ transactions.map((tx) => (
                       ) : (
                         qrPayments.map((p) => (
                           <tr key={p.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                            <td className="px-4 py-3"><CodeBlock code={p.transaction_id || 'N/A'} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={p.device_uuid || 'N/A'} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(p.amount || '0'))} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={p.transaction_id || 'N/A'} lang="text" inline /></td>
+                            <td className="px-4 py-3"><CodeBlock code={p.device_uuid || 'N/A'} lang="text" inline /></td>
+                            <td className="px-4 py-3"><CodeBlock code={formatCurrency(parseFloat(p.amount || '0'))} lang="text" inline /></td>
                             <td className="px-4 py-3">
                               <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
                                 {p.payment_method || 'N/A'}

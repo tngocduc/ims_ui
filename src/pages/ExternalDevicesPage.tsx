@@ -216,12 +216,12 @@ function ExternalDevicesPage() {
                     ) : (
                       devices.map((device) => (
                         <tr key={device.device_sn} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50 cursor-pointer" onClick={() => handleViewTransactions(device)}>
-                          <td className="px-4 py-3"><CodeBlock code={device.device_sn} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={device.device_sn} lang="text" inline /></td>
                           <td className="px-4 py-3 font-medium text-text-primary">{device.name || '—'}</td>
                           <td className="px-4 py-3 text-text-muted">{device.location || '—'}</td>
                           <td className="px-4 py-3">{device.stats?.transaction_count || 0}</td>
                           <td className="px-4 py-3">{device.stats?.paid_transaction_count || 0}</td>
-                          <td className="px-4 py-3"><CodeBlock code={device.stats?.total_sales || '0'} lang="text" className="inline" /></td>
+                          <td className="px-4 py-3"><CodeBlock code={device.stats?.total_sales || '0'} lang="text" inline /></td>
                           <td className="px-4 py-3">
                             <StatusBadge status={device.is_active ? 'pass' : 'fail'} label={device.is_active ? 'OK' : 'Error'} />
                           </td>
@@ -329,14 +329,14 @@ function ExternalDevicesPage() {
                       ) : (
                         transactions.map((tx) => (
                           <tr key={tx.id} className="border-b border-border-subtle/50 hover:bg-bg-surface-hover/50">
-                            <td className="px-4 py-3"><CodeBlock code={tx.order_no} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={tx.order_no} lang="text" inline /></td>
                             <td className="px-4 py-3">
                               <span className="px-2 py-0.5 text-xs font-mono bg-accent/10 text-accent border border-accent/20 rounded-[4px]">
                                 {paymentMethodLabels[tx.pay_method] || tx.pay_method}
                               </span>
                             </td>
-                            <td className="px-4 py-3"><CodeBlock code={tx.price} lang="text" className="inline" /></td>
-                            <td className="px-4 py-3"><CodeBlock code={tx.pay_amount} lang="text" className="inline" /></td>
+                            <td className="px-4 py-3"><CodeBlock code={tx.price} lang="text" inline /></td>
+                            <td className="px-4 py-3"><CodeBlock code={tx.pay_amount} lang="text" inline /></td>
                             <td className="px-4 py-3">
                               <StatusBadge status={tx.pay_status === 1 ? 'pass' : 'fail'} label={tx.pay_status === 1 ? 'OK' : 'Error'} />
                             </td>
