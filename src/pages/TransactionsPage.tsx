@@ -44,6 +44,8 @@ function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; vari
   return { label: tx.is_success ? 'OK' : 'Error', variant: tx.is_success ? 'pass' : 'fail' }
 }
 
+type ViewMode = 'device' | 'qr'
+
 function TransactionsPage() {
   const { user } = useAuth()
   const [viewMode, setViewMode] = useState<ViewMode>('device')

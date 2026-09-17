@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { tenantUserApi, deviceApi, reportApi } from '@/lib/api'
 import { MetricCard } from '@/components/ui/metric-card'
 import { Button } from '@/components/ui/button'
-import { Plus, Server, DollarSign, BarChart2, Activity, TrendingUp, Users, Wifi, Wallet } from 'lucide-react'
+import { Plus, Server, DollarSign, BarChart2, Activity } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SectionLabel } from '@/components/ui/card'
 import { useAuth } from '@/context/AuthContext'
@@ -190,14 +190,14 @@ function Dashboard() {
 
       <SectionLabel>thống kê</SectionLabel>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-4">
-        <MetricCard value={stats.totalUsers} label="Tổng người dùng" icon={<Users className="h-5 w-5" />} />
-        <MetricCard value={stats.totalDevices} label="Tổng thiết bị" icon={<Server className="h-5 w-5" />} />
-        <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" icon={<Wifi className="h-5 w-5" />} />
-        <MetricCard value={formatCurrency(stats.totalBalance)} label="Tổng số dư" icon={<Wallet className="h-5 w-5" />} />
-        <MetricCard value={formatCurrency(stats.totalSales)} label="Tổng doanh thu" icon={<DollarSign className="h-5 w-5" />} />
-        <MetricCard value={stats.successTransactions.toLocaleString()} label="Giao dịch thành công" icon={<Activity className="h-5 w-5" />} />
-        <MetricCard value={stats.failedTransactions.toLocaleString()} label="Giao dịch thất bại" icon={<Activity className="h-5 w-5" />} />
-        <MetricCard value={stats.totalTransactions.toLocaleString()} label="Tổng giao dịch" icon={<Activity className="h-5 w-5" />} />
+        <MetricCard value={stats.totalUsers} label="Tổng người dùng" />
+        <MetricCard value={stats.totalDevices} label="Tổng thiết bị" />
+        <MetricCard value={stats.onlineDevices} label="Thiết bị trực tuyến" />
+        <MetricCard value={formatCurrency(stats.totalBalance)} label="Tổng số dư" />
+        <MetricCard value={formatCurrency(stats.totalSales)} label="Tổng doanh thu" />
+        <MetricCard value={stats.successTransactions.toLocaleString()} label="Giao dịch thành công" />
+        <MetricCard value={stats.failedTransactions.toLocaleString()} label="Giao dịch thất bại" />
+        <MetricCard value={stats.totalTransactions.toLocaleString()} label="Tổng giao dịch" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

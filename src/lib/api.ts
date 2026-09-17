@@ -402,6 +402,10 @@ export interface DeviceTransaction {
   note: string | null
   vend_status: 'pending' | 'success' | 'failed' | 'timeout'
   refund_status: 'none' | 'required' | 'refunded' | 'failed'
+  tenant: {
+    id: number
+    name: string
+  }
 }
 
 export interface PaginatedDeviceTransactions {
@@ -424,8 +428,8 @@ export interface RefundTransaction {
   reason: string
   note: string
   is_success: boolean
-  vend_status: 'failed' | 'timeout'
-  refund_status: 'required' | 'refunded' | 'failed'
+  vend_status: 'pending' | 'success' | 'failed' | 'timeout'
+  refund_status: 'none' | 'required' | 'refunded' | 'failed'
 }
 
 export interface PaginatedRefunds {

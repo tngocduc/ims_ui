@@ -11,17 +11,6 @@ import { refundApi, RefundTransaction, MarkRefundedRequest } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 
-const refundStatusLabels: Record<string, string> = {
-  required: 'Cần hoàn tiền',
-  refunded: 'Đã hoàn tiền',
-  failed: 'Cần hoàn tiền',
-}
-
-const vendStatusLabels: Record<string, string> = {
-  failed: 'Trả hàng thất bại',
-  timeout: 'Hết thời gian chờ',
-}
-
 const paymentMethodLabels: Record<string, string> = {
   cash: 'Tiền mặt',
   coin: 'Xu',
@@ -103,7 +92,7 @@ function RefundQueuePage() {
   const handleMarkRefunded = async (txNumber: string) => {
     const note = refundNotes[txNumber]?.trim()
     if (!note) {
-      toast({ title: 'Vui lòng nhập ghi chú hoàn tiền', variant: 'destructive' })
+      toast({ title: 'Vui lòng nhập ghi chú hoàn tiền', variant: 'error' })
       return
     }
 
@@ -118,7 +107,7 @@ function RefundQueuePage() {
       fetchRefunds()
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Không thể đánh dấu hoàn tiền'
-      toast({ title: 'Lỗi', description: message, variant: 'destructive' })
+      toast({ title: 'Lỗi', description: message, variant: 'error' })
     } finally {
       setMarkingRefunded(prev => ({ ...prev, [txNumber]: false }))
     }

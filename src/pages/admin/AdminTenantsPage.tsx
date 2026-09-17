@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
-import { Plus, Search, Edit, CheckCircle, XCircle, Settings, CreditCard } from 'lucide-react'
+import { Plus, Search, Edit, CheckCircle, XCircle, CreditCard } from 'lucide-react'
 
 interface TenantResponse {
   items: Tenant[]
@@ -35,11 +35,11 @@ function AdminTenantsPage() {
   // VietQR config modal
   const [showVietqrModal, setShowVietqrModal] = useState(false)
   const [vietqrTenant, setVietqrTenant] = useState<Tenant | null>(null)
-  const [vietqrConfig, setVietqrConfig] = useState<{ vietqr_bank: string; vietqr_account_number: string; vietqr_account_name: string } | null>(null)
   const [vietqrFormData, setVietqrFormData] = useState({
     vietqr_bank: '',
     vietqr_account_number: '',
     vietqr_account_name: '',
+    seapay_api_key: '',
   })
   const [vietqrError, setVietqrError] = useState('')
   const [vietqrSuccess, setVietqrSuccess] = useState('')
@@ -110,8 +110,7 @@ function AdminTenantsPage() {
     setEditingTenant(null)
     setShowVietqrModal(false)
     setVietqrTenant(null)
-    setVietqrConfig(null)
-    setVietqrFormData({ vietqr_bank: '', vietqr_account_number: '', vietqr_account_name: '' })
+    setVietqrFormData({ vietqr_bank: '', vietqr_account_number: '', vietqr_account_name: '', seapay_api_key: '' })
     setVietqrError('')
     setVietqrSuccess('')
   }
@@ -123,11 +122,11 @@ function AdminTenantsPage() {
     setVietqrLoading(true)
     try {
       const config = await vietqrApi.adminGetConfig(tenant.id)
-      setVietqrConfig(config)
       setVietqrFormData({
         vietqr_bank: config.vietqr_bank || '',
         vietqr_account_number: config.vietqr_account_number || '',
         vietqr_account_name: config.vietqr_account_name || '',
+        seapay_api_key: config.seapay_api_key || '',
       })
     } catch (err) {
       setVietqrError('Không thể tải cấu hình VietQR')
@@ -151,8 +150,6 @@ function AdminTenantsPage() {
     try {
       await vietqrApi.adminUpdateConfig(vietqrTenant.id, vietqrFormData)
       setVietqrSuccess('Cập nhật cấu hình VietQR thành công')
-      const config = await vietqrApi.adminGetConfig(vietqrTenant.id)
-      setVietqrConfig(config)
     } catch (err: unknown) {
       const axiosError = err as { response?: { data?: { message?: string } } }
       setVietqrError(axiosError.response?.data?.message || 'Cập nhật thất bại')

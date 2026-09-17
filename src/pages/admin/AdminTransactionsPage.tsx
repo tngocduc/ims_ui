@@ -24,20 +24,6 @@ const paymentMethodLabels: Record<string, string> = {
   other: 'Khác',
 }
 
-const vendStatusLabels: Record<string, string> = {
-  pending: 'Đang chờ trả hàng',
-  success: 'Đã trả hàng',
-  failed: 'Trả hàng thất bại',
-  timeout: 'Hết thời gian chờ',
-}
-
-const refundStatusLabels: Record<string, string> = {
-  none: 'N/A',
-  required: 'Cần hoàn tiền',
-  refunded: 'Đã hoàn tiền',
-  failed: 'Cần hoàn tiền',
-}
-
 function getTransactionStatusLabel(tx: DeviceTransaction): { label: string; variant: 'pass' | 'fail' | 'pending' } {
   if (tx.is_success && tx.vend_status === 'success') {
     return { label: 'OK', variant: 'pass' }
