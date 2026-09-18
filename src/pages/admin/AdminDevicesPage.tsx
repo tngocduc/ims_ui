@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { CodeBlock } from '@/components/ui/code-block'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Plus, Search, Settings, Edit, Building2 } from 'lucide-react'
 
 interface DeviceResponse {
@@ -23,6 +24,10 @@ function AdminDevicesPage() {
   const [error, setError] = useState('')
   const [pagination, setPagination] = useState({ pageIndex: 1, pageSize: 20, total: 0, totalPages: 0 })
   const [filters, setFilters] = useState({ tenantId: '', search: '' })
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [editingDevice, setEditingDevice] = useState<Device | null>(null)
+  const [editForm, setEditForm] = useState({ type_name: '', firmware: '', status: '', is_active: true, extra_config: '' })
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     fetchTenants()
@@ -79,6 +84,50 @@ function AdminDevicesPage() {
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
     setPagination(prev => ({ ...prev, pageIndex: 1 }))
+  }
+
+  const handleEditClick = (device: Device) => {
+    setEditingDevice(device)
+    setEditForm({
+      type_name: device.type_name,
+      firmware: device.firmware,
+      status: device.status,
+      is_active: device.is_active,
+      extra_config: device.extra_config ? JSON.stringify(device.extra_config, null, 2) : '',
+    })
+    setEditModalOpen(true)
+  }
+
+  const handleEditChange = (key: string, value: string | boolean) => {
+    setEditForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleEditSubmit = async () => {
+    if (!editingDevice) return
+    try {
+      setEditLoading(true)
+      const extraConfig = editForm.extra_config ? JSON.parse(editForm.extra_config) : {}
+      await deviceApi.update(editingDevice.uuid, {
+        type_name: editForm.type_name,
+        firmware: editForm.firmware,
+        status: editForm.status,
+        is_active: editForm.is_active,
+        extra_config: extraConfig,
+      })
+      setEditModalOpen(false)
+      setEditingDevice(null)
+      fetchDevices()
+    } catch (err) {
+      console.error('Failed to update device:', err)
+      alert('Không thể cập nhật thiết bị')
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
+  const closeEditModal = () => {
+    setEditModalOpen(false)
+    setEditingDevice(null)
   }
 
   return (
@@ -179,7 +228,7 @@ function AdminDevicesPage() {
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <Button variant="ghost" size="sm" title="Xem cấu hình"><Settings className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="sm" title="Sửa"><Edit className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" title="Sửa" onClick={() => handleEditClick(device)}><Edit className="h-4 w-4" /></Button>
                             </div>
                           </td>
                         </tr>
@@ -238,6 +287,82 @@ function AdminDevicesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Device Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Sửa thiết bị</DialogTitle>
+            <DialogDescription>Cập nhật thông tin thiết bị {editingDevice?.uuid}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted">Loại thiết bị</label>
+                <Input
+                  value={editForm.type_name}
+                  onChange={(e) => handleEditChange('type_name', e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted">Firmware</label>
+                <Input
+                  value={editForm.firmware}
+                  onChange={(e) => handleEditChange('firmware', e.target.value)}
+                  disabled={editLoading}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted">Trạng thái</label>
+                <Select
+                  value={editForm.status}
+                  onChange={(e) => handleEditChange('status', e.target.value)}
+                  disabled={editLoading}
+                  options={[
+                    { value: 'online', label: 'Online' },
+                    { value: 'offline', label: 'Offline' },
+                    { value: 'maintenance', label: 'Maintenance' },
+                  ]}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted">Kích hoạt</label>
+                <Select
+                  value={String(editForm.is_active)}
+                  onChange={(e) => handleEditChange('is_active', e.target.value === 'true')}
+                  disabled={editLoading}
+                  options={[
+                    { value: 'true', label: 'Có' },
+                    { value: 'false', label: 'Không' },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted">Cấu hình thêm (JSON)</label>
+              <textarea
+                value={editForm.extra_config}
+                onChange={(e) => handleEditChange('extra_config', e.target.value)}
+                disabled={editLoading}
+                rows={6}
+                className="w-full h-32 px-3 text-sm font-mono bg-bg-surface border border-border-subtle rounded-[6px] focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 resize-none"
+                placeholder='{"key": "value"}'
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={closeEditModal} disabled={editLoading}>
+              Hủy
+            </Button>
+            <Button onClick={handleEditSubmit} disabled={editLoading}>
+              {editLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
