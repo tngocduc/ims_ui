@@ -11,6 +11,7 @@ interface VietqrConfig {
   vietqr_bank: string
   vietqr_account_number: string
   vietqr_account_name: string
+  vietqr_sub_account: string
   seapay_api_key: string
   has_vietqr_config: boolean
 }
@@ -25,6 +26,7 @@ function VietqrConfigPage() {
     vietqr_bank: '',
     vietqr_account_number: '',
     vietqr_account_name: '',
+    vietqr_sub_account: '',
     seapay_api_key: '',
   })
 
@@ -44,6 +46,7 @@ function VietqrConfigPage() {
           vietqr_bank: bankValue,
           vietqr_account_number: response.vietqr_account_number,
           vietqr_account_name: response.vietqr_account_name,
+          vietqr_sub_account: response.vietqr_sub_account || '',
           seapay_api_key: response.seapay_api_key || '',
         })
       }
@@ -138,7 +141,7 @@ function VietqrConfigPage() {
       {config && config.has_vietqr_config && (
         <div className="p-3 text-sm bg-status-pass/10 border border-status-pass/20 rounded-[4px] flex items-center gap-2 text-status-pass">
           <CheckCircle className="h-4 w-4 flex-shrink-0" />
-          <span>Đã cấu hình: {config.vietqr_bank} - {config.vietqr_account_name} - {config.vietqr_account_number}</span>
+          <span>Đã cấu hình: {config.vietqr_bank} - {config.vietqr_account_name} - {config.vietqr_account_number}{config.vietqr_sub_account && ` (TK phụ: ${config.vietqr_sub_account})`}</span>
         </div>
       )}
 
@@ -192,6 +195,16 @@ function VietqrConfigPage() {
             />
 
             <Input
+              label="Tài khoản phụ (SePay VA)"
+              name="vietqr_sub_account"
+              value={formData.vietqr_sub_account}
+              onChange={handleChange}
+              placeholder="Không bắt buộc, ví dụ: LOCSPAY000340935"
+              disabled={saving}
+              autoComplete="off"
+            />
+
+            <Input
               label={<>Tên chủ tài khoản <span className='text-status-fail'>*</span></>}
               name="vietqr_account_name"
               value={formData.vietqr_account_name}
@@ -228,8 +241,9 @@ function VietqrConfigPage() {
         <CardContent className="pt-0 space-y-2 text-sm text-text-muted">
           <p>1. Chọn ngân hàng mà tài khoản của bạn mở tại ngân hàng đó</p>
           <p>2. Nhập đúng số tài khoản (không dấu cách, không ký tự đặc biệt)</p>
-          <p>3. Tên chủ tài khoản sẽ hiển thị trên ứng dụng ngân hàng khi khách hàng quét mã QR</p>
-          <p>4. Sau khi lưu, hệ thống sẽ tự động tạo mã VietQR cho các giao dịch thanh toán</p>
+          <p>3. Tài khoản phụ (không bắt buộc): nhập mã tài khoản ảo do SePay cấp. Khi có, mã QR sẽ dùng tài khoản phụ thay cho số tài khoản. Ngân hàng phải là ngân hàng cấp tài khoản phụ</p>
+          <p>4. Tên chủ tài khoản sẽ hiển thị trên ứng dụng ngân hàng khi khách hàng quét mã QR</p>
+          <p>5. Sau khi lưu, hệ thống sẽ tự động tạo mã VietQR cho các giao dịch thanh toán</p>
           <p className="text-status-fail font-medium">Lưu ý: Thông tin này nhạy cảm, hãy đảm bảo chỉ người được ủy quyền mới có quyền truy cập trang này</p>
         </CardContent>
       </Card>
